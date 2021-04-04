@@ -1,0 +1,5 @@
+{
+a = read_int();
+b = read_int();
+println(a + b);
+}

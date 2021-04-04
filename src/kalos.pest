@@ -1,0 +1,25 @@
+stmt = { compound_stmt | assignment_stmt | if_stmt | while_stmt | expr_stmt }
+compound_stmt = { "{" ~ stmt* ~ "}" }
+assignment_stmt = { expr ~ "=" ~ expr ~ ";" }
+if_stmt = { "if" ~ "(" ~ expr ~ ")" ~ stmt }
+while_stmt = { "while" ~ "(" ~ expr ~ ")" ~ stmt }
+expr_stmt = { expr ~ ";" }
+
+expr = { call | atom ~ (operator ~ atom)* }
+atom = { "(" ~ expr ~ ")" | literal | identifier }
+operator = _{ power | multiply | divide | modulo | add | subtract }
+	add = { "+" }
+	subtract = { "-" }
+	multiply = { "*" }
+	divide = { "/" }
+	power = { "**" }
+	modulo = { "%" }
+
+call = { atom ~ "(" ~ param_list ~ ")" }
+param_list = { expr? ~ ("," ~ expr)* }
+
+literal = { ASCII_DIGIT+ }
+identifier = @{ LETTER ~ (LETTER | NUMBER | "_")* }
+
+WHITESPACE = _{ " " | "\t" | "\r" | "\n" }
+COMMENT = _{ "/*" ~ (!"*/" ~ ANY)* ~ "*/" }
