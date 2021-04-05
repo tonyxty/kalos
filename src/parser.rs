@@ -1,7 +1,7 @@
 use pest::iterators::{Pair, Pairs};
 use pest::prec_climber::{Assoc, Operator, PrecClimber};
 
-use crate::ast::{KalosBinOp, KalosExpr, KalosStmt};
+use crate::ast::{KalosBinOp, KalosExpr, KalosStmt, KalosToplevel};
 
 #[derive(Parser)]
 #[grammar = "kalos.pest"]
@@ -62,6 +62,7 @@ pub fn parse_stmt(stmt: Pair<Rule>) -> KalosStmt {
                                   parse_expr(Pairs::single(expr)))
         }
         Rule::compound_stmt => KalosStmt::Compound(stmt.into_inner().map(parse_stmt).collect()),
+        Rule::return_stmt => KalosStmt::Return(parse_expr(Pairs::single(stmt.into_inner().next().unwrap()))),
         Rule::if_stmt => {
             let mut parts = stmt.into_inner();
             let expr = parts.next().unwrap();
@@ -80,5 +81,20 @@ pub fn parse_stmt(stmt: Pair<Rule>) -> KalosStmt {
             println!("{:?}", stmt);
             unreachable!()
         }
+    }
+}
+
+pub fn parse_toplevel(t: Pair<Rule>) -> KalosToplevel {
+    match t.as_rule() {
+        Rule::toplevel => parse_toplevel(t.into_inner().next().unwrap()),
+        Rule::def => {
+            let mut parts = t.into_inner();
+            let name = parts.next().unwrap().as_str().to_owned();
+            let param_list: Vec<String> = parts.next().unwrap().into_inner()
+                .map(|p| p.as_str().to_owned()).collect();
+            let body = parse_stmt(parts.next().unwrap());
+            KalosToplevel::Def(name, param_list, body)
+        }
+        _ => unreachable!()
     }
 }

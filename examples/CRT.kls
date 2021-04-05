@@ -1,7 +1,7 @@
-{
-a = read_int();
-b = read_int();
-c = read_int();
-x = a * 70 + b * 21 + c * 15;
-println(x % 105);
+def main() {
+	a = read_int();
+	b = read_int();
+	c = read_int();
+	x = a * 70 + b * 21 + c * 15;
+	println(x % 105);
 }

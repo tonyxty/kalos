@@ -1,0 +1,11 @@
+def hanoi(n, x, y, z) {
+	if (n) {
+		hanoi(n - 1, x, z, y);
+		println(x, z);
+		hanoi(n - 1, y, x, z);
+	}
+}
+
+def main() {
+	hanoi(3, 1, 2, 3);
+}

@@ -1,6 +1,13 @@
-stmt = { compound_stmt | assignment_stmt | if_stmt | while_stmt | expr_stmt }
+program = { toplevel* }
+
+toplevel = { def }
+def = { "def" ~ identifier ~ "(" ~ param_list ~ ")" ~ compound_stmt }
+param_list = { identifier? ~ ("," ~ identifier)* }
+
+stmt = { compound_stmt | assignment_stmt | return_stmt | if_stmt | while_stmt | expr_stmt }
 compound_stmt = { "{" ~ stmt* ~ "}" }
 assignment_stmt = { expr ~ "=" ~ expr ~ ";" }
+return_stmt = { "return" ~ expr ~ ";" }
 if_stmt = { "if" ~ "(" ~ expr ~ ")" ~ stmt }
 while_stmt = { "while" ~ "(" ~ expr ~ ")" ~ stmt }
 expr_stmt = { expr ~ ";" }
@@ -15,8 +22,8 @@ operator = _{ power | multiply | divide | modulo | add | subtract }
 	power = { "**" }
 	modulo = { "%" }
 
-call = { atom ~ "(" ~ param_list ~ ")" }
-param_list = { expr? ~ ("," ~ expr)* }
+call = { atom ~ "(" ~ arg_list ~ ")" }
+arg_list = { expr? ~ ("," ~ expr)* }
 
 literal = { ASCII_DIGIT+ }
 identifier = @{ LETTER ~ (LETTER | NUMBER | "_")* }

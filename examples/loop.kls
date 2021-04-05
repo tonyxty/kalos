@@ -1,7 +1,7 @@
-{
-x = 25;
-while (x) {
-	if (x % 2) println(x * x);
-	x = x - 1;
-}
+def main() {
+	x = 25;
+	while (x) {
+		if (x % 2) println(x * x);
+		x = x - 1;
+	}
 }

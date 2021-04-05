@@ -9,18 +9,20 @@ use std::fs::read_to_string;
 
 use pest::Parser;
 
-use crate::eval::{create_default_ctx, run_stmt};
-use crate::parser::{KalosParser, parse_stmt, Rule};
+use crate::eval::{create_default_ctx, run_program};
+use crate::parser::{KalosParser, parse_toplevel, Rule};
 
 mod ast;
 mod parser;
 mod eval;
 
 fn main() {
-    let filename = std::env::args().skip(1).next().unwrap();
+    let filename = std::env::args().nth(1).unwrap();
     let source = read_to_string(&filename).unwrap();
-    let parse_result = KalosParser::parse(Rule::stmt, &source).unwrap().next().unwrap();
-    let stmt = parse_stmt(parse_result);
+    let parse_result = KalosParser::parse(Rule::program, &source).unwrap().next().unwrap();
+    let program = parse_result.into_inner().map(parse_toplevel).collect();
     let mut ctx = create_default_ctx();
-    run_stmt(&mut ctx, &stmt);
+    if let Err(e) = run_program(&mut ctx, &program) {
+        println!("{}", e);
+    }
 }
