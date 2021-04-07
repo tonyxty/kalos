@@ -43,9 +43,9 @@ pub fn parse_expr(expr: Pair<Rule>) -> KalosExpr {
         |pair: Pair<Rule>| match pair.as_rule() {
             Rule::call => {
                 let mut parts = pair.into_inner();
-                let func = parts.next().unwrap();
-                let params = parts.next().unwrap().into_inner();
-                Call(box parse_atom(func), params.map(|p| parse_expr(p)).collect())
+                let func = box parse_atom(parts.next().unwrap());
+                let params = parts.next().unwrap().into_inner().map(parse_expr).collect();
+                Call(func, params)
             }
             Rule::atom => parse_atom(pair),
             _ => unreachable!(),
@@ -68,24 +68,24 @@ pub fn parse_stmt(stmt: Pair<Rule>) -> KalosStmt {
     match stmt.as_rule() {
         Rule::assignment_stmt => {
             let mut parts = stmt.into_inner();
-            let lvalue = parts.next().unwrap();
-            let expr = parts.next().unwrap();
-            KalosStmt::Assignment(parse_expr(lvalue), parse_expr(expr))
+            let lvalue = parse_expr(parts.next().unwrap());
+            let expr = parse_expr(parts.next().unwrap());
+            KalosStmt::Assignment(lvalue, expr)
         }
         Rule::compound_stmt => KalosStmt::Compound(stmt.into_inner().map(parse_stmt).collect()),
         Rule::return_stmt => KalosStmt::Return(parse_expr(stmt.into_inner().next().unwrap())),
         Rule::if_stmt => {
             let mut parts = stmt.into_inner();
-            let expr = parts.next().unwrap();
-            let then_body = parts.next().unwrap();
+            let expr = parse_expr(parts.next().unwrap());
+            let then_body = box parse_stmt(parts.next().unwrap());
             let else_body = parts.next().map(|p| box parse_stmt(p));
-            KalosStmt::If(parse_expr(expr), box parse_stmt(then_body), else_body)
+            KalosStmt::If(expr, then_body, else_body)
         }
         Rule::while_stmt => {
             let mut parts = stmt.into_inner();
-            let expr = parts.next().unwrap();
-            let body = parts.next().unwrap();
-            KalosStmt::While(parse_expr(expr), box parse_stmt(body))
+            let expr = parse_expr(parts.next().unwrap());
+            let body = box parse_stmt(parts.next().unwrap());
+            KalosStmt::While(expr, body)
         }
         Rule::expr_stmt => KalosStmt::Expression(parse_expr(stmt.into_inner().next().unwrap())),
         _ => unreachable!(),
