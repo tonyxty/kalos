@@ -72,8 +72,7 @@ impl Display for KalosError {
 
 pub fn call_function(ctx: &mut KalosCtx, params: &Vec<String>, args: &Vec<KalosValue>,
                      body: &KalosStmt) -> Result<KalosValue, KalosError> {
-    let local = HashMap::from_iter(Iterator::zip(params.iter(), args.iter())
-        .map(|(k, v)| (k.clone(), v.clone()) ));
+    let local = HashMap::from_iter(Iterator::zip(params.clone().into_iter(), args.clone()));
     ctx.frames.push(local);
     run_stmt(ctx, body)?;
     ctx.frames.pop();

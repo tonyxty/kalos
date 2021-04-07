@@ -1,7 +1,7 @@
 program = { toplevel* }
 
 toplevel = { def }
-def = { "def" ~ identifier ~ "(" ~ param_list ~ ")" ~ compound_stmt }
+def = { "def" ~ identifier ~ "(" ~ param_list ~ ")" ~ stmt }
 param_list = { identifier? ~ ("," ~ identifier)* }
 
 stmt = { compound_stmt | assignment_stmt | return_stmt | if_stmt | while_stmt | expr_stmt }
