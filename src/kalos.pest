@@ -1,19 +1,20 @@
-program = { toplevel* }
+program = { SOI ~ toplevel* ~ EOI }
 
-toplevel = { def }
+toplevel = _{ def }
 def = { "def" ~ identifier ~ "(" ~ param_list ~ ")" ~ stmt }
 param_list = { identifier? ~ ("," ~ identifier)* }
 
-stmt = { compound_stmt | assignment_stmt | return_stmt | if_stmt | while_stmt | expr_stmt }
+stmt = _{ compound_stmt | var_stmt | assignment_stmt | return_stmt | if_stmt | while_stmt | expr_stmt }
 compound_stmt = { "{" ~ stmt* ~ "}" }
+var_stmt = { "var" ~ identifier ~ (":" ~ type_expr)? ~ ("=" ~ expr)? ~ ";" }
 assignment_stmt = { expr ~ "=" ~ expr ~ ";" }
 return_stmt = { "return" ~ expr ~ ";" }
-if_stmt = { "if" ~ "(" ~ expr ~ ")" ~ stmt ~ ("else" ~ stmt)?}
+if_stmt = { "if" ~ "(" ~ expr ~ ")" ~ stmt ~ ("else" ~ stmt)? }
 while_stmt = { "while" ~ "(" ~ expr ~ ")" ~ stmt }
 expr_stmt = { expr ~ ";" }
 
 expr = { call | atom ~ (operator ~ atom)* }
-atom = { "(" ~ expr ~ ")" | literal | identifier }
+atom = _{ "(" ~ expr ~ ")" | literal | identifier }
 operator = _{ power | multiply | divide | modulo | add | subtract }
 	add = { "+" }
 	subtract = { "-" }
@@ -24,6 +25,8 @@ operator = _{ power | multiply | divide | modulo | add | subtract }
 
 call = { atom ~ "(" ~ arg_list ~ ")" }
 arg_list = { expr? ~ ("," ~ expr)* }
+
+type_expr = { "auto" }
 
 literal = { ASCII_DIGIT+ }
 identifier = @{ LETTER ~ (LETTER | NUMBER | "_")* }

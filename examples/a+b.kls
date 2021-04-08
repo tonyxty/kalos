@@ -1,4 +1,6 @@
 def main() {
+	var a: auto = 1;
+	var b;
 	a = read_int();
 	b = read_int();
 	println(a + b);

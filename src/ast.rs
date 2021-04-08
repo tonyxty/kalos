@@ -17,9 +17,15 @@ pub enum KalosExpr {
 }
 
 #[derive(Clone, Debug)]
+pub enum KalosTypeExpr {
+    Auto,
+}
+
+#[derive(Clone, Debug)]
 pub enum KalosStmt {
     Compound(Vec<Self>),
     Assignment(KalosExpr, KalosExpr),
+    Var(String, KalosTypeExpr, Option<KalosExpr>),
     Return(KalosExpr),
     If(KalosExpr, Box<Self>, Option<Box<Self>>),
     While(KalosExpr, Box<Self>),

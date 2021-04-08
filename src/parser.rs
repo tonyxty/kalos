@@ -1,7 +1,7 @@
 use pest::iterators::Pair;
 use pest::prec_climber::PrecClimber;
 
-use crate::ast::{KalosBinOp::*, KalosExpr::{self, *}, KalosStmt, KalosToplevel};
+use crate::ast::{KalosBinOp::*, KalosExpr::{self, *}, KalosStmt, KalosToplevel, KalosTypeExpr};
 
 #[derive(Parser)]
 #[grammar = "kalos.pest"]
@@ -26,14 +26,17 @@ fn parse_identifier(id: Pair<Rule>) -> String {
 }
 
 fn parse_atom(atom: Pair<Rule>) -> KalosExpr {
-    assert!(atom.as_rule() == Rule::atom);
-    let atom = atom.into_inner().next().unwrap();
     match atom.as_rule() {
         Rule::literal => Literal(atom.as_str().parse::<i64>().unwrap()),
         Rule::identifier => Identifier(parse_identifier(atom)),
         Rule::expr => parse_expr(atom),
         _ => unreachable!(),
     }
+}
+
+fn parse_type_expr(type_expr: Pair<Rule>) -> KalosTypeExpr {
+    assert!(type_expr.as_rule() == Rule::type_expr);
+    KalosTypeExpr::Auto
 }
 
 pub fn parse_expr(expr: Pair<Rule>) -> KalosExpr {
@@ -47,8 +50,7 @@ pub fn parse_expr(expr: Pair<Rule>) -> KalosExpr {
                 let params = parts.next().unwrap().into_inner().map(parse_expr).collect();
                 Call(func, params)
             }
-            Rule::atom => parse_atom(pair),
-            _ => unreachable!(),
+            _ => parse_atom(pair),
         },
         |lhs: KalosExpr, op: Pair<Rule>, rhs: KalosExpr| match op.as_rule() {
             Rule::add => BinOp(Add, box lhs, box rhs),
@@ -63,8 +65,6 @@ pub fn parse_expr(expr: Pair<Rule>) -> KalosExpr {
 }
 
 pub fn parse_stmt(stmt: Pair<Rule>) -> KalosStmt {
-    assert!(stmt.as_rule() == Rule::stmt);
-    let stmt = stmt.into_inner().next().unwrap();
     match stmt.as_rule() {
         Rule::assignment_stmt => {
             let mut parts = stmt.into_inner();
@@ -73,6 +73,18 @@ pub fn parse_stmt(stmt: Pair<Rule>) -> KalosStmt {
             KalosStmt::Assignment(lvalue, expr)
         }
         Rule::compound_stmt => KalosStmt::Compound(stmt.into_inner().map(parse_stmt).collect()),
+        Rule::var_stmt => {
+            let mut parts = stmt.into_inner();
+            let name = parse_identifier(parts.next().unwrap());
+            let mut type_annotation = KalosTypeExpr::Auto;
+            let mut initializer = None;
+            parts.for_each(|p| match p.as_rule() {
+                Rule::type_expr => type_annotation = parse_type_expr(p),
+                Rule::expr => initializer = Some(parse_expr(p)),
+                _ => unreachable!(),
+            });
+            KalosStmt::Var(name, type_annotation, initializer)
+        }
         Rule::return_stmt => KalosStmt::Return(parse_expr(stmt.into_inner().next().unwrap())),
         Rule::if_stmt => {
             let mut parts = stmt.into_inner();
@@ -93,17 +105,15 @@ pub fn parse_stmt(stmt: Pair<Rule>) -> KalosStmt {
 }
 
 pub fn parse_toplevel(t: Pair<Rule>) -> KalosToplevel {
-    assert!(t.as_rule() == Rule::toplevel);
-    let t = t.into_inner().next().unwrap();
     match t.as_rule() {
         Rule::def => {
             let mut parts = t.into_inner();
             let name = parse_identifier(parts.next().unwrap());
-            let param_list: Vec<String> = parts.next().unwrap().into_inner()
+            let param_list = parts.next().unwrap().into_inner()
                 .map(|p| p.as_str().to_owned()).collect();
             let body = parse_stmt(parts.next().unwrap());
             KalosToplevel::Def(name, param_list, body)
         }
-        _ => unreachable!()
+        _ => unreachable!(),
     }
 }

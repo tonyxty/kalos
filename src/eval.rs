@@ -1,5 +1,6 @@
 use std::borrow::Borrow;
 use std::collections::HashMap;
+use std::error::Error;
 use std::fmt::{Display, Formatter, Write};
 use std::io::stdin;
 use std::iter::FromIterator;
@@ -44,7 +45,7 @@ impl KalosValue {
         match self {
             Unit => true,
             Integer(x) => *x != 0,
-            Function(_, _) => true,
+            Function(..) => true,
         }
     }
 
@@ -56,6 +57,7 @@ impl KalosValue {
     }
 }
 
+#[derive(Debug)]
 pub enum KalosError {
     NameError,
     TypeError,
@@ -69,6 +71,8 @@ impl Display for KalosError {
         }
     }
 }
+
+impl Error for KalosError {}
 
 pub fn call_function(ctx: &mut KalosCtx, params: &Vec<String>, args: &Vec<KalosValue>,
                      body: &KalosStmt) -> Result<KalosValue, KalosError> {
@@ -107,15 +111,15 @@ pub fn eval_expr(ctx: &mut KalosCtx, expr: &KalosExpr) -> Result<KalosValue, Kal
 
 pub fn run_stmt(ctx: &mut KalosCtx, stmt: &KalosStmt) -> Result<(), KalosError> {
     match stmt {
-        Compound(s) => {
-            let t: Result<Vec<()>, KalosError> = s.iter().map(|s| run_stmt(ctx, s)).collect();
-            t?;
-        }
+        Compound(s) => s.iter().try_for_each(|s| run_stmt(ctx, s))?,
         Assignment(lhs, rhs) => {
             if let Identifier(name) = lhs {
                 let val = eval_expr(ctx, rhs)?;
                 ctx.frames.last_mut().unwrap().insert(name.to_owned(), val);
             } else { return Err(TypeError); }
+        }
+        Var(name, type_annotation, initializer) => {
+            println!("var {}: {:?} = {:?}", name, type_annotation, initializer);
         }
         Return(expr) => {
             let val = eval_expr(ctx, expr)?;
