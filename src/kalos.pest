@@ -1,8 +1,10 @@
 program = _{ SOI ~ toplevel* ~ EOI }
 
 toplevel = _{ def | extern_stmt }
-def = { "def" ~ identifier ~ param_list ~ stmt }
-extern_stmt = { "extern" ~ identifier ~ param_list ~ ";" }
+def = { "def" ~ prototype ~ stmt }
+extern_stmt = { "extern" ~ prototype ~ ";" }
+
+prototype = { identifier ~ param_list ~ ("->" ~ type_expr)? }
 param_list = { "(" ~ identifier? ~ ("," ~ identifier)* ~ ")" }
 
 stmt = _{ compound_stmt | var_stmt | assignment_stmt | return_stmt | if_stmt | while_stmt | expr_stmt }
@@ -27,7 +29,9 @@ operator = _{ power | multiply | divide | modulo | add | subtract }
 call = { atom ~ "(" ~ arg_list ~ ")" }
 arg_list = { expr? ~ ("," ~ expr)* }
 
-type_expr = { "auto" }
+type_expr = { auto | int }
+    auto = { "auto "}
+    int = { "int" }
 
 literal = @{ ASCII_DIGIT+ }
 identifier = @{ LETTER ~ (LETTER | NUMBER | "_")* }

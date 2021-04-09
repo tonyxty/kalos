@@ -1,7 +1,6 @@
+extern read_int() -> int;
+extern println(x);
+
+def sum(a, b) { return a + b * 2; }
 def main() {
-	var a: auto = 1;
-	var b;
-	a = read_int();
-	b = read_int();
-	println(a + b);
 }

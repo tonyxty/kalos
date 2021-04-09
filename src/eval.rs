@@ -5,10 +5,10 @@ use std::fmt::{Display, Formatter, Write};
 use std::io::stdin;
 use std::iter::FromIterator;
 
+use crate::ast::{KalosProgram, KalosToplevel};
 use crate::ast::KalosBinOp::{self, *};
 use crate::ast::KalosExpr::{self, *};
 use crate::ast::KalosStmt::{self, *};
-use crate::ast::{KalosToplevel, KalosProgram};
 use crate::eval::KalosError::*;
 use crate::eval::KalosValue::*;
 
@@ -141,10 +141,11 @@ pub fn run_stmt(ctx: &mut KalosCtx, stmt: &KalosStmt) -> Result<(), KalosError> 
 pub fn run_program(ctx: &mut KalosCtx, program: &KalosProgram) -> Result<KalosValue, KalosError> {
     for t in &program.program {
         match t {
-            KalosToplevel::Def(name, params, body) => {
-                ctx.globals.insert(name.to_owned(), KalosValue::Function(params.clone(), body.clone()));
+            KalosToplevel::Def(prototype, body) => {
+                ctx.globals.insert(prototype.name.to_owned(),
+                                   KalosValue::Function(prototype.params.clone(), body.clone()));
             }
-            KalosToplevel::Extern(_, _) => {}
+            KalosToplevel::Extern(..) => {}
         }
     }
     if let Function(_, body) = ctx.globals.get("main").cloned().ok_or(NameError)? {

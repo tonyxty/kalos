@@ -32,9 +32,15 @@ pub enum KalosStmt {
     Expression(KalosExpr),
 }
 
+pub struct KalosPrototype {
+    pub name: String,
+    pub params: Vec<String>,
+    pub return_type: Option<KalosTypeExpr>,
+}
+
 pub enum KalosToplevel {
-    Def(String, Vec<String>, KalosStmt),
-    Extern(String, usize),
+    Def(KalosPrototype, KalosStmt),
+    Extern(KalosPrototype),
 }
 
 pub struct KalosProgram {

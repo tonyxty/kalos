@@ -1,8 +1,7 @@
 use pest::iterators::{Pair, Pairs};
 use pest::prec_climber::PrecClimber;
 
-use crate::ast::{KalosBinOp::*, KalosExpr::{self, *}, KalosProgram, KalosStmt, KalosToplevel,
-                 KalosTypeExpr};
+use crate::ast::{KalosBinOp::*, KalosExpr::{self, *}, KalosProgram, KalosPrototype, KalosStmt, KalosToplevel, KalosTypeExpr};
 
 #[derive(Parser)]
 #[grammar = "kalos.pest"]
@@ -27,7 +26,6 @@ fn parse_identifier(id: Pair<Rule>) -> String {
 }
 
 fn parse_atom(atom: Pair<Rule>) -> KalosExpr {
-    println!("{:?}: {}", atom.as_rule(), atom.as_str());
     match atom.as_rule() {
         Rule::literal => Literal(atom.as_str().parse::<i64>().unwrap()),
         Rule::identifier => Identifier(parse_identifier(atom)),
@@ -106,22 +104,29 @@ pub fn parse_stmt(stmt: Pair<Rule>) -> KalosStmt {
     }
 }
 
+fn parse_prototype(prototype: Pair<Rule>) -> KalosPrototype {
+    assert!(prototype.as_rule() == Rule::prototype);
+    let mut parts = prototype.into_inner();
+    let name = parse_identifier(parts.next().unwrap());
+    let params = parts.next().unwrap().into_inner().map(parse_identifier).collect();
+    let return_type = parts.next().map(parse_type_expr);
+    KalosPrototype {
+        name,
+        params,
+        return_type,
+    }
+}
+
 pub fn parse_toplevel(t: Pair<Rule>) -> KalosToplevel {
     match t.as_rule() {
         Rule::def => {
             let mut parts = t.into_inner();
-            let name = parse_identifier(parts.next().unwrap());
-            let param_list = parts.next().unwrap().into_inner()
-                .map(|p| p.as_str().to_owned()).collect();
+            let prototype = parse_prototype(parts.next().unwrap());
             let body = parse_stmt(parts.next().unwrap());
-            KalosToplevel::Def(name, param_list, body)
+            KalosToplevel::Def(prototype, body)
         }
-        Rule::extern_stmt => {
-            let mut parts = t.into_inner();
-            let name = parse_identifier(parts.next().unwrap());
-            let param_num = parts.count();
-            KalosToplevel::Extern(name, param_num)
-        }
+        Rule::extern_stmt =>
+            KalosToplevel::Extern(parse_prototype(t.into_inner().next().unwrap())),
         _ => unreachable!(),
     }
 }
