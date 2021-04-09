@@ -28,7 +28,7 @@ arg_list = { expr? ~ ("," ~ expr)* }
 
 type_expr = { "auto" }
 
-literal = { ASCII_DIGIT+ }
+literal = @{ ASCII_DIGIT+ }
 identifier = @{ LETTER ~ (LETTER | NUMBER | "_")* }
 
 WHITESPACE = _{ " " | "\t" | "\r" | "\n" }
