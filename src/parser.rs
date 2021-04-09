@@ -1,7 +1,8 @@
-use pest::iterators::Pair;
+use pest::iterators::{Pair, Pairs};
 use pest::prec_climber::PrecClimber;
 
-use crate::ast::{KalosBinOp::*, KalosExpr::{self, *}, KalosStmt, KalosToplevel, KalosTypeExpr};
+use crate::ast::{KalosBinOp::*, KalosExpr::{self, *}, KalosProgram, KalosStmt, KalosToplevel,
+                 KalosTypeExpr};
 
 #[derive(Parser)]
 #[grammar = "kalos.pest"]
@@ -26,6 +27,7 @@ fn parse_identifier(id: Pair<Rule>) -> String {
 }
 
 fn parse_atom(atom: Pair<Rule>) -> KalosExpr {
+    println!("{:?}: {}", atom.as_rule(), atom.as_str());
     match atom.as_rule() {
         Rule::literal => Literal(atom.as_str().parse::<i64>().unwrap()),
         Rule::identifier => Identifier(parse_identifier(atom)),
@@ -114,6 +116,20 @@ pub fn parse_toplevel(t: Pair<Rule>) -> KalosToplevel {
             let body = parse_stmt(parts.next().unwrap());
             KalosToplevel::Def(name, param_list, body)
         }
+        Rule::extern_stmt => {
+            let mut parts = t.into_inner();
+            let name = parse_identifier(parts.next().unwrap());
+            let param_num = parts.count();
+            KalosToplevel::Extern(name, param_num)
+        }
         _ => unreachable!(),
+    }
+}
+
+pub fn parse_program(t: Pairs<Rule>) -> KalosProgram {
+    let program = t.take_while(|p| p.as_rule() != Rule::EOI)
+        .map(parse_toplevel).collect();
+    KalosProgram {
+        program,
     }
 }

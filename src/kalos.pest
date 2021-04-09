@@ -1,8 +1,9 @@
-program = { SOI ~ toplevel* ~ EOI }
+program = _{ SOI ~ toplevel* ~ EOI }
 
-toplevel = _{ def }
-def = { "def" ~ identifier ~ "(" ~ param_list ~ ")" ~ stmt }
-param_list = { identifier? ~ ("," ~ identifier)* }
+toplevel = _{ def | extern_stmt }
+def = { "def" ~ identifier ~ param_list ~ stmt }
+extern_stmt = { "extern" ~ identifier ~ param_list ~ ";" }
+param_list = { "(" ~ identifier? ~ ("," ~ identifier)* ~ ")" }
 
 stmt = _{ compound_stmt | var_stmt | assignment_stmt | return_stmt | if_stmt | while_stmt | expr_stmt }
 compound_stmt = { "{" ~ stmt* ~ "}" }

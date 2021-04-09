@@ -8,7 +8,7 @@ use std::iter::FromIterator;
 use crate::ast::KalosBinOp::{self, *};
 use crate::ast::KalosExpr::{self, *};
 use crate::ast::KalosStmt::{self, *};
-use crate::ast::KalosToplevel;
+use crate::ast::{KalosToplevel, KalosProgram};
 use crate::eval::KalosError::*;
 use crate::eval::KalosValue::*;
 
@@ -105,7 +105,7 @@ pub fn eval_expr(ctx: &mut KalosCtx, expr: &KalosExpr) -> Result<KalosValue, Kal
             let op = ctx.bin_ops.get(op).ok_or(NameError)?;
             Ok(op(&eval_expr(ctx, x)?, &eval_expr(ctx, y)?))
         }
-        Identifier(ident) => ctx.frames.last().unwrap().get(ident).cloned().ok_or(NameError),
+        Identifier(name) => ctx.frames.last().unwrap().get(name).cloned().ok_or(NameError),
     }
 }
 
@@ -138,12 +138,13 @@ pub fn run_stmt(ctx: &mut KalosCtx, stmt: &KalosStmt) -> Result<(), KalosError> 
     Ok(())
 }
 
-pub fn run_program(ctx: &mut KalosCtx, program: &Vec<KalosToplevel>) -> Result<KalosValue, KalosError> {
-    for t in program {
+pub fn run_program(ctx: &mut KalosCtx, program: &KalosProgram) -> Result<KalosValue, KalosError> {
+    for t in &program.program {
         match t {
             KalosToplevel::Def(name, params, body) => {
                 ctx.globals.insert(name.to_owned(), KalosValue::Function(params.clone(), body.clone()));
             }
+            KalosToplevel::Extern(_, _) => {}
         }
     }
     if let Function(_, body) = ctx.globals.get("main").cloned().ok_or(NameError)? {

@@ -34,4 +34,9 @@ pub enum KalosStmt {
 
 pub enum KalosToplevel {
     Def(String, Vec<String>, KalosStmt),
+    Extern(String, usize),
+}
+
+pub struct KalosProgram {
+    pub program: Vec<KalosToplevel>,
 }
