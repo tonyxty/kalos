@@ -3,4 +3,8 @@ extern println(x);
 
 def sum(a, b) { return a + b * 2; }
 def main() {
+	var x;
+	if (x) {
+		x = x + 1;
+	}
 }

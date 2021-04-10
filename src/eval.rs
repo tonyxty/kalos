@@ -1,6 +1,5 @@
 use std::borrow::Borrow;
 use std::collections::HashMap;
-use std::error::Error;
 use std::fmt::{Display, Formatter, Write};
 use std::io::stdin;
 use std::iter::FromIterator;
@@ -9,7 +8,7 @@ use crate::ast::{KalosProgram, KalosToplevel};
 use crate::ast::KalosBinOp::{self, *};
 use crate::ast::KalosExpr::{self, *};
 use crate::ast::KalosStmt::{self, *};
-use crate::eval::KalosError::*;
+use crate::codegen::KalosError::{self, *};
 use crate::eval::KalosValue::*;
 
 pub struct KalosCtx {
@@ -56,23 +55,6 @@ impl KalosValue {
         }
     }
 }
-
-#[derive(Debug)]
-pub enum KalosError {
-    NameError,
-    TypeError,
-}
-
-impl Display for KalosError {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            NameError => f.write_str("NameError"),
-            TypeError => f.write_str("TypeError"),
-        }
-    }
-}
-
-impl Error for KalosError {}
 
 pub fn call_function(ctx: &mut KalosCtx, params: &Vec<String>, args: &Vec<KalosValue>,
                      body: &KalosStmt) -> Result<KalosValue, KalosError> {
