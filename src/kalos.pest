@@ -11,7 +11,7 @@ stmt = _{ compound_stmt | var_stmt | assignment_stmt | return_stmt | if_stmt | w
 compound_stmt = { "{" ~ stmt* ~ "}" }
 var_stmt = { "var" ~ identifier ~ (":" ~ type_expr)? ~ ("=" ~ expr)? ~ ";" }
 assignment_stmt = { expr ~ "=" ~ expr ~ ";" }
-return_stmt = { "return" ~ expr ~ ";" }
+return_stmt = { "return" ~ expr? ~ ";" }
 if_stmt = { "if" ~ "(" ~ expr ~ ")" ~ stmt ~ ("else" ~ stmt)? }
 while_stmt = { "while" ~ "(" ~ expr ~ ")" ~ stmt }
 expr_stmt = { expr ~ ";" }

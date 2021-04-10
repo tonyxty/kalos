@@ -3,18 +3,19 @@ use std::convert::TryInto;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 
+use inkwell::basic_block::BasicBlock;
 use inkwell::builder::Builder;
 use inkwell::context::Context;
 use inkwell::execution_engine::ExecutionEngine;
 use inkwell::module::{Linkage, Module};
-use inkwell::OptimizationLevel;
+use inkwell::{OptimizationLevel, IntPredicate};
 use inkwell::passes::PassManager;
 use inkwell::types::FunctionType;
 use inkwell::values::{AnyValue, AnyValueEnum, BasicValueEnum, FunctionValue, PointerValue};
 
 use crate::ast::{KalosBinOp, KalosExpr, KalosProgram, KalosPrototype, KalosStmt, KalosToplevel, KalosTypeExpr};
+use crate::codegen::KalosError::*;
 use crate::env::Env;
-use inkwell::basic_block::BasicBlock;
 
 #[derive(Debug)]
 pub enum KalosError {
@@ -102,7 +103,7 @@ impl<'ctx> LLVMCodeGen<'ctx> {
                     .and_then(|v| v.try_into().map_err(|_| KalosError::TypeError)))
                     .collect::<Result<Vec<BasicValueEnum>, KalosError>>()?;
                 self.builder.build_call(func, &args[..], "").
-                    try_as_basic_value().unwrap_left()
+                    try_as_basic_value().unwrap_left().as_any_value_enum()
             }
             KalosExpr::BinOp(op, x, y) => {
                 let x = self.compile_expr(x)?.into_int_value();
@@ -114,17 +115,17 @@ impl<'ctx> LLVMCodeGen<'ctx> {
                     KalosBinOp::Divide => self.builder.build_int_signed_div(x, y, ""),
                     KalosBinOp::Modulo => self.builder.build_int_signed_rem(x, y, ""),
                     KalosBinOp::Power => unimplemented!()
-                }.into()
+                }.as_any_value_enum()
             }
             KalosExpr::Identifier(name) => {
                 let var = self.env.get(name).copied().ok_or(KalosError::NameError)?;
                 if var.is_pointer_value() {
-                    self.builder.build_load(var.into_pointer_value(), "")
+                    self.builder.build_load(var.into_pointer_value(), "").as_any_value_enum()
                 } else {
-                    var.try_into().unwrap()
+                    var
                 }
             }
-        }.as_any_value_enum())
+        })
     }
 
     pub fn compile_stmt(&mut self, stmt: &KalosStmt) -> Result<(), KalosError> {
@@ -145,15 +146,21 @@ impl<'ctx> LLVMCodeGen<'ctx> {
                 }
             }
             KalosStmt::Return(expr) => {
-                let expr: BasicValueEnum = self.compile_expr(expr)?.try_into().unwrap();
-                self.builder.build_return(Some(&expr));
+                if let Some(expr) = expr {
+                    let expr_value: BasicValueEnum = self.compile_expr(expr)?.try_into().unwrap();
+                    self.builder.build_return(Some(&expr_value));
+                } else {
+                    self.builder.build_return(None);
+                }
             }
             KalosStmt::If(cond, then_part, else_part) => {
+                let cond_value = self.compile_expr(cond)?.into_int_value();
+                let cond_value = self.builder.build_int_compare(
+                    IntPredicate::EQ, cond_value, self.context.i64_type().const_zero(), "");
                 let then_block = self.new_block();
                 let else_block = self.new_block();
                 let cont_block = self.new_block();
-                self.builder.build_conditional_branch(self.compile_expr(cond)?.into_int_value(),
-                                                      then_block, else_block);
+                self.builder.build_conditional_branch(cond_value, then_block, else_block);
                 self.builder.position_at_end(then_block);
                 self.compile_stmt(then_part)?;
                 self.builder.build_unconditional_branch(cont_block);
@@ -164,8 +171,20 @@ impl<'ctx> LLVMCodeGen<'ctx> {
                 self.builder.build_unconditional_branch(cont_block);
                 self.builder.position_at_end(cont_block);
             }
-            KalosStmt::While(_, _) => {}
-            KalosStmt::Expression(_) => {}
+            KalosStmt::While(cond, body) => {
+                let cond_value = self.compile_expr(cond)?.into_int_value();
+                let loop_block = self.new_block();
+                let cont_block = self.new_block();
+                self.builder.build_conditional_branch(cond_value, loop_block, cont_block);
+                self.builder.position_at_end(loop_block);
+                self.compile_stmt(body)?;
+                let cond_value_recheck = self.compile_expr(cond)?.into_int_value();
+                self.builder.build_conditional_branch(cond_value_recheck, loop_block, cont_block);
+                self.builder.position_at_end(cont_block);
+            }
+            KalosStmt::Expression(expr) => {
+                self.compile_expr(expr)?;
+            }
         }
         Ok(())
     }
@@ -181,11 +200,13 @@ impl<'ctx> LLVMCodeGen<'ctx> {
                     .zip(func.get_param_iter())
                     .map(|(name, param)| (name.clone(), param.into()))
                     .collect());
-                let basic_block = self.context.append_basic_block(func, "");
-                self.builder.position_at_end(basic_block);
+                let block = self.context.append_basic_block(func, "");
+                self.builder.position_at_end(block);
                 self.current_fn = Some(func);
                 self.compile_stmt(body)?;
                 self.current_fn = None;
+                assert!(func.verify(true));
+                self.fpm.run_on(&func);
                 self.env.pop();
                 Ok(func)
             }

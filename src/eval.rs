@@ -104,7 +104,7 @@ pub fn run_stmt(ctx: &mut KalosCtx, stmt: &KalosStmt) -> Result<(), KalosError> 
             println!("var {}: {:?} = {:?}", name, type_annotation, initializer);
         }
         Return(expr) => {
-            let val = eval_expr(ctx, expr)?;
+            let val = expr.as_ref().map(|e| eval_expr(ctx, e)).unwrap_or(Ok(Unit))?;
             ctx.globals.insert(String::from("$"), val);
         }
         If(cond, then_part, else_part) => if eval_expr(ctx, cond)?.is_true() {

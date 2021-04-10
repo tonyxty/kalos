@@ -1,3 +1,6 @@
+extern read_int() -> int;
+extern println(x, y);
+
 def hanoi(n, x, y, z) {
 	if (n) {
 		hanoi(n - 1, x, z, y);
@@ -6,10 +9,12 @@ def hanoi(n, x, y, z) {
 	} else {
 		println(x, z);
 	}
+	return 0;
 }
 
 def main() {
 	var n;
 	n = read_int();
 	hanoi(n - 1, 1, 2, 3);
+	return 0;
 }

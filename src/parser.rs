@@ -85,7 +85,7 @@ pub fn parse_stmt(stmt: Pair<Rule>) -> KalosStmt {
             });
             KalosStmt::Var(name, type_annotation, initializer)
         }
-        Rule::return_stmt => KalosStmt::Return(parse_expr(stmt.into_inner().next().unwrap())),
+        Rule::return_stmt => KalosStmt::Return(stmt.into_inner().next().map(parse_expr)),
         Rule::if_stmt => {
             let mut parts = stmt.into_inner();
             let expr = parse_expr(parts.next().unwrap());

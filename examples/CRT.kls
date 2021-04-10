@@ -1,7 +1,10 @@
+extern read_int() -> int;
+extern println(x);
 def main() {
-	a = read_int();
-	b = read_int();
-	c = read_int();
-	x = a * 70 + b * 21 + c * 15;
+	var a = read_int();
+	var b = read_int();
+	var c = read_int();
+	var x = a * 70 + b * 21 + c * 15;
 	println(x % 105);
+	return;
 }
