@@ -17,7 +17,6 @@ use crate::parser::{KalosParser, parse_program, Rule};
 
 mod ast;
 mod parser;
-mod eval;
 mod env;
 mod codegen;
 

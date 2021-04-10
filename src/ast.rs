@@ -11,35 +11,35 @@ pub enum KalosBinOp {
 #[derive(Clone, Debug)]
 pub enum KalosExpr {
     Literal(i64),
-    Call(Box<Self>, Vec<Self>),
-    BinOp(KalosBinOp, Box<Self>, Box<Self>),
+    Call { func: Box<Self>, args: Vec<Self> },
+    BinOp { op: KalosBinOp, lhs: Box<Self>, rhs: Box<Self> },
     Identifier(String),
 }
 
 #[derive(Clone, Debug)]
-pub enum KalosTypeExpr {
+pub enum KalosType {
     Auto,
 }
 
 #[derive(Clone, Debug)]
 pub enum KalosStmt {
     Compound(Vec<Self>),
-    Assignment(KalosExpr, KalosExpr),
-    Var(String, KalosTypeExpr, Option<KalosExpr>),
+    Assignment { lhs: KalosExpr, rhs: KalosExpr },
+    Var { name: String, ty: KalosType, initializer: Option<KalosExpr> },
     Return(Option<KalosExpr>),
-    If(KalosExpr, Box<Self>, Option<Box<Self>>),
-    While(KalosExpr, Box<Self>),
+    If { cond: KalosExpr, then_part: Box<Self>, else_part: Option<Box<Self>> },
+    While { cond: KalosExpr, body: Box<Self> },
     Expression(KalosExpr),
 }
 
 pub struct KalosPrototype {
     pub name: String,
     pub params: Vec<String>,
-    pub return_type: Option<KalosTypeExpr>,
+    pub return_type: Option<KalosType>,
 }
 
 pub enum KalosToplevel {
-    Def(KalosPrototype, KalosStmt),
+    Def { prototype: KalosPrototype, body: KalosStmt },
     Extern(KalosPrototype),
 }
 

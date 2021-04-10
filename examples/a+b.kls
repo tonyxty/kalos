@@ -3,7 +3,7 @@ extern println(x);
 
 def sum(a, b) -> int { return a + b * 2; }
 def main() {
-	var x;
+	var x = 0;
 	if (x) {
 		x = x + 1;
 	}
