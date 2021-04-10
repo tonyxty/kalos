@@ -4,8 +4,9 @@ toplevel = _{ def | extern_stmt }
 def = { "def" ~ prototype ~ compound_stmt }
 extern_stmt = { "extern" ~ prototype ~ ";" }
 
-prototype = { identifier ~ param_list ~ ("->" ~ type_expr)? }
-param_list = { "(" ~ identifier? ~ ("," ~ identifier)* ~ ")" }
+prototype = { identifier ~ "(" ~ param_list ~ ellipsis? ~ ")" ~ ("->" ~ type_expr)? }
+param_list = { identifier? ~ ("," ~ identifier)* }
+ellipsis = { "..." }
 
 stmt = _{ compound_stmt | var_stmt | assignment_stmt | return_stmt | if_stmt | while_stmt | expr_stmt }
 compound_stmt = { "{" ~ stmt* ~ "}" }
@@ -16,8 +17,12 @@ if_stmt = { "if" ~ "(" ~ expr ~ ")" ~ stmt ~ ("else" ~ stmt)? }
 while_stmt = { "while" ~ "(" ~ expr ~ ")" ~ stmt }
 expr_stmt = { expr ~ ";" }
 
-expr = { call | atom ~ (operator ~ atom)* }
+expr = { primary ~ (operator ~ primary)* }
+primary = _{ call | atom }
 atom = _{ "(" ~ expr ~ ")" | literal | identifier }
+
+call = { atom ~ "(" ~ arg_list ~ ")" }
+arg_list = { expr? ~ ("," ~ expr)* }
 operator = _{ power | multiply | divide | modulo | add | subtract }
 	add = { "+" }
 	subtract = { "-" }
@@ -25,9 +30,6 @@ operator = _{ power | multiply | divide | modulo | add | subtract }
 	divide = { "/" }
 	power = { "**" }
 	modulo = { "%" }
-
-call = { atom ~ "(" ~ arg_list ~ ")" }
-arg_list = { expr? ~ ("," ~ expr)* }
 
 type_expr = { auto | int }
     auto = { "auto "}

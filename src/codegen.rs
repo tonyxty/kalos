@@ -82,7 +82,7 @@ impl<'ctx> LLVMCodeGen<'ctx> {
         let i64_type = self.context.i64_type();
         let n = prototype.params.len();
         let param_types = vec![i64_type.into(); n];
-        i64_type.fn_type(&param_types, false)
+        i64_type.fn_type(&param_types, prototype.variadic)
     }
 
     pub fn compile_lvalue(&self, expr: &KalosExpr) -> Result<PointerValue<'ctx>, KalosError> {
@@ -156,7 +156,7 @@ impl<'ctx> LLVMCodeGen<'ctx> {
             KalosStmt::If { cond, then_part, else_part } => {
                 let cond_value = self.compile_expr(cond)?.into_int_value();
                 let cond_value = self.builder.build_int_compare(
-                    IntPredicate::EQ, cond_value, self.context.i64_type().const_zero(), "");
+                    IntPredicate::NE, cond_value, self.context.i64_type().const_zero(), "");
                 let then_block = self.new_block();
                 let else_block = self.new_block();
                 let cont_block = self.new_block();
@@ -173,12 +173,16 @@ impl<'ctx> LLVMCodeGen<'ctx> {
             }
             KalosStmt::While { cond, body } => {
                 let cond_value = self.compile_expr(cond)?.into_int_value();
+                let cond_value = self.builder.build_int_compare(
+                    IntPredicate::NE, cond_value, self.context.i64_type().const_zero(), "");
                 let loop_block = self.new_block();
                 let cont_block = self.new_block();
                 self.builder.build_conditional_branch(cond_value, loop_block, cont_block);
                 self.builder.position_at_end(loop_block);
                 self.compile_stmt(body)?;
                 let cond_value_recheck = self.compile_expr(cond)?.into_int_value();
+                let cond_value_recheck = self.builder.build_int_compare(
+                    IntPredicate::NE, cond_value_recheck, self.context.i64_type().const_zero(), "");
                 self.builder.build_conditional_branch(cond_value_recheck, loop_block, cont_block);
                 self.builder.position_at_end(cont_block);
             }

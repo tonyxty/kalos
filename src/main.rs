@@ -1,4 +1,5 @@
 #![feature(box_syntax)]
+#![feature(c_variadic)]
 #[macro_use]
 extern crate lazy_static;
 extern crate pest;

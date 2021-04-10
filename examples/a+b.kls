@@ -1,10 +1,10 @@
 extern read_int() -> int;
-extern println(x);
+extern println(...);
 
 def sum(a, b) -> int { return a + b; }
 def main() {
 	var x = read_int();
 	var y = read_int();
-	println(sum(x, y));
+	println(1, sum(x, y));
 	return 0;
 }

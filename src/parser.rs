@@ -2,6 +2,7 @@ use pest::iterators::{Pair, Pairs};
 use pest::prec_climber::PrecClimber;
 
 use crate::ast::{KalosBinOp::*, KalosExpr::{self, *}, KalosProgram, KalosPrototype, KalosStmt, KalosToplevel, KalosType};
+use std::env::var;
 
 #[derive(Parser)]
 #[grammar = "kalos.pest"]
@@ -112,11 +113,18 @@ fn parse_prototype(prototype: Pair<Rule>) -> KalosPrototype {
     let mut parts = prototype.into_inner();
     let name = parse_identifier(parts.next().unwrap());
     let params = parts.next().unwrap().into_inner().map(parse_identifier).collect();
-    let return_type = parts.next().map(parse_type_expr);
+    let mut variadic = false;
+    let mut return_type = None;
+    parts.for_each(|p| match p.as_rule() {
+        Rule::ellipsis => variadic = true,
+        Rule::type_expr => return_type = Some(parse_type_expr(p)),
+        _ => unreachable!(),
+    });
     KalosPrototype {
         name,
         params,
         return_type,
+        variadic,
     }
 }
 

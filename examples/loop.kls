@@ -1,7 +1,9 @@
+extern println(...);
 def main() {
-	x = 25;
+	var x = 25;
 	while (x) {
-		if (x % 2) println(x * x);
+		if (x % 2) println(1, x * x);
 		x = x - 1;
 	}
+	return 0;
 }

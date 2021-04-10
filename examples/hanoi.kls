@@ -1,13 +1,13 @@
 extern read_int() -> int;
-extern println(x, y);
+extern println(...);
 
 def hanoi(n, x, y, z) {
 	if (n) {
 		hanoi(n - 1, x, z, y);
-		println(x, z);
+		println(2, x, z);
 		hanoi(n - 1, y, x, z);
 	} else {
-		println(x, z);
+		println(2, x, z);
 	}
 	return 0;
 }

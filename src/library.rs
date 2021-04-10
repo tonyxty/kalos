@@ -1,7 +1,12 @@
 use std::io::stdin;
 
-pub extern "C" fn println(x: i64) {
-    println!("{}", x);
+pub unsafe extern "C" fn println(n: i64, mut args: ...) -> i64 {
+    let mut values = Vec::new();
+    for _ in 0..n {
+        values.push(args.arg::<i64>().to_string());
+    }
+    println!("{}", values.join(" "));
+    n
 }
 
 pub extern "C" fn read_int() -> i64 {

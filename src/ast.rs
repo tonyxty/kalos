@@ -36,6 +36,7 @@ pub struct KalosPrototype {
     pub name: String,
     pub params: Vec<String>,
     pub return_type: Option<KalosType>,
+    pub variadic: bool,
 }
 
 pub enum KalosToplevel {
