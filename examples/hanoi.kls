@@ -13,8 +13,7 @@ def hanoi(n, x, y, z) {
 }
 
 def main() {
-	var n;
-	n = read_int();
+	var n = read_int();
 	hanoi(n - 1, 1, 2, 3);
 	return 0;
 }

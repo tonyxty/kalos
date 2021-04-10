@@ -12,13 +12,17 @@ use std::fs::read_to_string;
 use inkwell::context::Context;
 use pest::Parser;
 
-use crate::codegen::LLVMCodeGen;
+use crate::codegen::{LLVMCodeGen, KalosError};
 use crate::parser::{KalosParser, parse_program, Rule};
+use crate::library::{println, read_int};
+use inkwell::values::AnyValueEnum;
+use inkwell::types::{BasicTypeEnum, BasicType};
 
 mod ast;
 mod parser;
 mod env;
 mod codegen;
+mod library;
 
 #[derive(Debug)]
 enum MainError {
@@ -43,15 +47,17 @@ fn main() -> anyhow::Result<()> {
     let program = parse_program(parse);
     codegen.compile_program(&program)?;
 
-    /*
+    codegen.module.print_to_stderr();
+
+    codegen.add_fn("println", println as usize);
+    codegen.add_fn("read_int", read_int as usize);
+
     let jit_main = unsafe {
         codegen.engine.get_function::<unsafe extern "C" fn() -> i64>("main")
     }?;
 
     let s = unsafe { jit_main.call() };
-    println!("{}", s);
-     */
-    codegen.module.print_to_stderr();
+    println!("main() returned with {}", s);
 
     Ok(())
 }

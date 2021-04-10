@@ -38,9 +38,9 @@ impl Error for KalosError {}
 
 pub struct LLVMCodeGen<'ctx> {
     context: &'ctx Context,
-    pub module: Module<'ctx>,
+    pub(crate) module: Module<'ctx>,
     builder: Builder<'ctx>,
-    engine: ExecutionEngine<'ctx>,
+    pub(crate) engine: ExecutionEngine<'ctx>,
     fpm: PassManager<FunctionValue<'ctx>>,
     env: Env<String, AnyValueEnum<'ctx>>,
     current_fn: Option<FunctionValue<'ctx>>,
@@ -212,7 +212,7 @@ impl<'ctx> LLVMCodeGen<'ctx> {
             }
             KalosToplevel::Extern(prototype) => {
                 let fn_type = self.compile_prototype(prototype);
-                let func = self.module.add_function(&prototype.name, fn_type, Some(Linkage::External));
+                let func = self.module.add_function(&prototype.name, fn_type, None);
                 self.env.put(prototype.name.clone(), func.into());
                 Ok(func)
             }
@@ -221,5 +221,11 @@ impl<'ctx> LLVMCodeGen<'ctx> {
 
     pub fn compile_program(&mut self, program: &KalosProgram) -> Result<(), KalosError> {
         program.program.iter().try_for_each(|t| self.compile_toplevel(t).map(|_| ()))
+    }
+
+    pub fn add_fn(&self, name: &str, addr: usize) {
+        if let Some(fn_ref) = self.module.get_function(name) {
+            self.engine.add_global_mapping(&fn_ref, addr);
+        }
     }
 }

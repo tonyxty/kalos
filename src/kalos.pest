@@ -1,7 +1,7 @@
 program = _{ SOI ~ toplevel* ~ EOI }
 
 toplevel = _{ def | extern_stmt }
-def = { "def" ~ prototype ~ stmt }
+def = { "def" ~ prototype ~ compound_stmt }
 extern_stmt = { "extern" ~ prototype ~ ";" }
 
 prototype = { identifier ~ param_list ~ ("->" ~ type_expr)? }
