@@ -9,7 +9,7 @@ use pest::Parser;
 use crate::codegen::LLVMCodeGen;
 use crate::execution::JITExecutionEngine;
 use crate::parser::{KalosParser, parse_program, Rule};
-use crate::runtime::DEFAULT_RUNTIME;
+pub use crate::runtime::DEFAULT_RUNTIME;
 
 mod ast;
 mod parser;
@@ -18,7 +18,9 @@ mod codegen;
 mod execution;
 mod runtime;
 
-pub fn run(filename: &str) -> i64 {
+pub fn run<'a, T>(filename: &str, runtime: impl IntoIterator<Item=&'a (&'a T, usize)>) -> i64
+    where T: 'a + ?Sized + AsRef<str>
+{
     let input = read_to_string(filename).expect("some read thing failed");
     let parse = KalosParser::parse(Rule::program, &input).expect("some parse thing failed");
     let program = parse_program(parse);
@@ -31,7 +33,7 @@ pub fn run(filename: &str) -> i64 {
     module.print_to_stderr();
 
     let engine = JITExecutionEngine::new(&module);
-    engine.attach_runtime(&*DEFAULT_RUNTIME);
+    engine.attach_runtime(runtime);
     let fn_main = engine.get_main();
     unsafe { fn_main.call() }
 }

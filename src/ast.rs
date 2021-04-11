@@ -20,7 +20,6 @@ pub enum KalosExpr {
 pub enum KalosType {
     Auto,
     Unit,
-    Bool,
     Integer { signed: bool, width: usize },
 }
 
