@@ -1,23 +1,33 @@
 #![feature(c_variadic)]
 
+use std::cell::RefCell;
+
 use lazy_static::lazy_static;
 
 use kalos::run;
 
-// ** Important **  Due to the use of globals, the tests must be run with --test-threads=1
-
-static mut OUTPUT_BUF: Option<Vec<i64>> = None;
+thread_local! {
+    static INPUT_BUF: RefCell<Option<Vec<i64>>> = RefCell::new(None);
+    static OUTPUT_BUF: RefCell<Option<Vec<i64>>> = RefCell::new(None);
+}
 
 unsafe extern "C" fn println(n: i64, mut args: ...) {
     for _ in 0..n {
-        OUTPUT_BUF.as_mut().unwrap().push(args.arg::<i64>());
+        let val = args.arg::<i64>();
+        OUTPUT_BUF.with(|output_buf| {
+            let mut output_buf = output_buf.borrow_mut();
+            let output_buf = output_buf.as_mut().unwrap();
+            output_buf.push(val)
+        });
     }
 }
 
-static mut INPUT_BUF: Option<Vec<i64>> = None;
-
 extern "C" fn read_int() -> i64 {
-    unsafe { INPUT_BUF.as_mut() }.unwrap().pop().unwrap()
+    INPUT_BUF.with(|input_buf| {
+        let mut input_buf = input_buf.borrow_mut();
+        let input_buf = input_buf.as_mut().unwrap();
+        input_buf.pop().unwrap()
+    })
 }
 
 lazy_static! {
@@ -28,16 +38,17 @@ lazy_static! {
 }
 
 fn test_file(filename: &str, input: Vec<i64>, output: Vec<i64>) {
-    unsafe {
-        INPUT_BUF = Some(input);
-        OUTPUT_BUF = Some(Vec::new());
-    }
+    INPUT_BUF.with(|input_buf| input_buf.replace(Some(input)));
+    OUTPUT_BUF.with(|output_buf| output_buf.replace(Some(Vec::new())));
     run(filename, &*TEST_RUNTIME);
-    let output_buf = unsafe { OUTPUT_BUF.as_ref() }.unwrap();
-    assert_eq!(output_buf.len(), output.len());
-    for (x, y) in output_buf.iter().zip(&output) {
-        assert_eq!(*x, *y);
-    }
+    OUTPUT_BUF.with(|output_buf| {
+        let output_buf = output_buf.borrow();
+        let output_buf = output_buf.as_ref().unwrap();
+        assert_eq!(output_buf.len(), output.len());
+        for (x, y) in output_buf.iter().zip(&output) {
+            assert_eq!(*x, *y);
+        }
+    });
 }
 
 #[test]
