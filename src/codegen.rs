@@ -3,17 +3,16 @@ use std::convert::TryInto;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 
-use inkwell::{IntPredicate, OptimizationLevel};
+use inkwell::IntPredicate;
 use inkwell::basic_block::BasicBlock;
 use inkwell::builder::Builder;
 use inkwell::context::Context;
-use inkwell::execution_engine::ExecutionEngine;
-use inkwell::module::{Linkage, Module};
+use inkwell::module::Module;
 use inkwell::passes::PassManager;
 use inkwell::types::FunctionType;
 use inkwell::values::{AnyValue, AnyValueEnum, BasicValueEnum, FunctionValue, PointerValue};
 
-use crate::ast::{KalosBinOp, KalosExpr, KalosProgram, KalosPrototype, KalosStmt, KalosToplevel, KalosType};
+use crate::ast::{KalosBinOp, KalosExpr, KalosProgram, KalosPrototype, KalosStmt, KalosToplevel};
 use crate::codegen::KalosError::*;
 use crate::env::Env;
 
@@ -36,23 +35,20 @@ impl Display for KalosError {
 
 impl Error for KalosError {}
 
-pub struct LLVMCodeGen<'ctx> {
+pub struct LLVMCodeGen<'ctx, 'm> {
     context: &'ctx Context,
-    pub(crate) module: Module<'ctx>,
+    module: &'m Module<'ctx>,
     builder: Builder<'ctx>,
-    pub(crate) engine: ExecutionEngine<'ctx>,
     fpm: PassManager<FunctionValue<'ctx>>,
     env: Env<String, AnyValueEnum<'ctx>>,
     current_fn: Option<FunctionValue<'ctx>>,
 }
 
-impl<'ctx> LLVMCodeGen<'ctx> {
-    pub fn new(context: &'ctx Context) -> Self {
-        let module = context.create_module("tmp");
+impl<'ctx, 'm> LLVMCodeGen<'ctx, 'm> {
+    pub fn new(context: &'ctx Context, module: &'m Module<'ctx>) -> Self {
         let builder = context.create_builder();
-        let engine = module.create_jit_execution_engine(OptimizationLevel::None).unwrap();
         let env = Env::from(vec![HashMap::new()]);
-        let fpm = PassManager::create(&module);
+        let fpm = PassManager::create(module);
         fpm.add_instruction_combining_pass();
         fpm.add_reassociate_pass();
         fpm.add_gvn_pass();
@@ -67,13 +63,14 @@ impl<'ctx> LLVMCodeGen<'ctx> {
             context,
             module,
             builder,
-            engine,
             fpm,
             env,
             current_fn: None,
         }
     }
+}
 
+impl<'ctx> LLVMCodeGen<'ctx, '_> {
     fn new_block(&self) -> BasicBlock<'ctx> {
         self.context.append_basic_block(self.current_fn.unwrap(), "")
     }
@@ -221,11 +218,5 @@ impl<'ctx> LLVMCodeGen<'ctx> {
 
     pub fn compile_program(&mut self, program: &KalosProgram) -> Result<(), KalosError> {
         program.program.iter().try_for_each(|t| self.compile_toplevel(t).map(|_| ()))
-    }
-
-    pub fn add_fn(&self, name: &str, addr: usize) {
-        if let Some(fn_ref) = self.module.get_function(name) {
-            self.engine.add_global_mapping(&fn_ref, addr);
-        }
     }
 }
