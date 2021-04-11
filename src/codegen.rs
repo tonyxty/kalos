@@ -128,7 +128,11 @@ impl<'ctx> LLVMCodeGen<'ctx, '_> {
     pub fn compile_stmt(&mut self, stmt: &KalosStmt) -> Result<(), KalosError> {
         println!("{:?}", stmt);
         match stmt {
-            KalosStmt::Compound(s) => s.iter().try_for_each(|stmt| self.compile_stmt(stmt))?,
+            KalosStmt::Compound(s) => {
+                self.env.push_empty();
+                s.iter().try_for_each(|stmt| self.compile_stmt(stmt))?;
+                self.env.pop();
+            },
             KalosStmt::Assignment { lhs, rhs } => {
                 let lhs = self.compile_lvalue(lhs)?;
                 let rhs: BasicValueEnum = self.compile_expr(rhs)?.try_into().unwrap();
