@@ -200,24 +200,20 @@ impl<'ctx> LLVMCodeGen<'ctx> {
                 let fn_type = self.compile_prototype(prototype);
                 let func = self.module.add_function(&prototype.name, fn_type, None);
                 self.env.put(prototype.name.clone(), func.into());
-                self.env.push(prototype.params.iter()
-                    .zip(func.get_param_iter())
-                    .map(|(name, param)| (name.clone(), param.into()))
-                    .collect());
-                let block = self.context.append_basic_block(func, "");
-                self.builder.position_at_end(block);
-                self.current_fn = Some(func);
-                self.compile_stmt(body)?;
-                self.current_fn = None;
-                assert!(func.verify(true));
-                self.fpm.run_on(&func);
-                self.env.pop();
-                Ok(func)
-            }
-            KalosToplevel::Extern(prototype) => {
-                let fn_type = self.compile_prototype(prototype);
-                let func = self.module.add_function(&prototype.name, fn_type, None);
-                self.env.put(prototype.name.clone(), func.into());
+                if let Some(body) = body {
+                    self.env.push(prototype.params.iter()
+                        .zip(func.get_param_iter())
+                        .map(|(name, param)| (name.clone(), param.into()))
+                        .collect());
+                    let block = self.context.append_basic_block(func, "");
+                    self.builder.position_at_end(block);
+                    self.current_fn = Some(func);
+                    self.compile_stmt(body)?;
+                    self.current_fn = None;
+                    assert!(func.verify(true));
+                    self.fpm.run_on(&func);
+                    self.env.pop();
+                }
                 Ok(func)
             }
         }

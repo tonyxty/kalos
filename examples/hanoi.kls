@@ -1,5 +1,5 @@
-extern read_int() -> int;
-extern println(...);
+def read_int() -> int extern;
+def println(n...) extern;
 
 def hanoi(n, x, y, z) {
 	if (n) {

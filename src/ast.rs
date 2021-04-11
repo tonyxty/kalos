@@ -19,6 +19,9 @@ pub enum KalosExpr {
 #[derive(Clone, Debug)]
 pub enum KalosType {
     Auto,
+    Unit,
+    Bool,
+    Integer { signed: bool, width: usize },
 }
 
 #[derive(Clone, Debug)]
@@ -35,13 +38,12 @@ pub enum KalosStmt {
 pub struct KalosPrototype {
     pub name: String,
     pub params: Vec<String>,
-    pub return_type: Option<KalosType>,
+    pub return_type: KalosType,
     pub variadic: bool,
 }
 
 pub enum KalosToplevel {
-    Def { prototype: KalosPrototype, body: KalosStmt },
-    Extern(KalosPrototype),
+    Def { prototype: KalosPrototype, body: Option<KalosStmt> },
 }
 
 pub struct KalosProgram {

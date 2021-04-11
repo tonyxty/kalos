@@ -1,8 +1,7 @@
 program = _{ SOI ~ toplevel* ~ EOI }
 
-toplevel = _{ def | extern_stmt }
-def = { "def" ~ prototype ~ compound_stmt }
-extern_stmt = { "extern" ~ prototype ~ ";" }
+toplevel = _{ def }
+def = { "def" ~ prototype ~ ("extern" ~ ";" | compound_stmt) }
 
 prototype = { identifier ~ "(" ~ param_list ~ ellipsis? ~ ")" ~ ("->" ~ type_expr)? }
 param_list = { identifier? ~ ("," ~ identifier)* }
@@ -32,7 +31,7 @@ operator = _{ power | multiply | divide | modulo | add | subtract }
 	modulo = { "%" }
 
 type_expr = { auto | int }
-    auto = { "auto "}
+    auto = { "auto" }
     int = { "int" }
 
 literal = @{ ASCII_DIGIT+ }

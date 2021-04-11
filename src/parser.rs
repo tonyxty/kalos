@@ -2,7 +2,6 @@ use pest::iterators::{Pair, Pairs};
 use pest::prec_climber::PrecClimber;
 
 use crate::ast::{KalosBinOp::*, KalosExpr::{self, *}, KalosProgram, KalosPrototype, KalosStmt, KalosToplevel, KalosType};
-use std::env::var;
 
 #[derive(Parser)]
 #[grammar = "kalos.pest"]
@@ -35,9 +34,14 @@ fn parse_atom(atom: Pair<Rule>) -> KalosExpr {
     }
 }
 
-fn parse_type_expr(type_expr: Pair<Rule>) -> KalosType {
+fn parse_type(type_expr: Pair<Rule>) -> KalosType {
+    use KalosType::*;
     assert!(type_expr.as_rule() == Rule::type_expr);
-    KalosType::Auto
+    match type_expr.into_inner().next().unwrap().as_rule() {
+        Rule::auto => Auto,
+        Rule::int => Integer { signed: true, width: 64 },
+        _ => unreachable!(),
+    }
 }
 
 pub fn parse_expr(expr: Pair<Rule>) -> KalosExpr {
@@ -83,7 +87,7 @@ pub fn parse_stmt(stmt: Pair<Rule>) -> KalosStmt {
             let mut ty = KalosType::Auto;
             let mut initializer = None;
             parts.for_each(|p| match p.as_rule() {
-                Rule::type_expr => ty = parse_type_expr(p),
+                Rule::type_expr => ty = parse_type(p),
                 Rule::expr => initializer = Some(parse_expr(p)),
                 _ => unreachable!(),
             });
@@ -114,10 +118,10 @@ fn parse_prototype(prototype: Pair<Rule>) -> KalosPrototype {
     let name = parse_identifier(parts.next().unwrap());
     let params = parts.next().unwrap().into_inner().map(parse_identifier).collect();
     let mut variadic = false;
-    let mut return_type = None;
+    let mut return_type = KalosType::Unit;
     parts.for_each(|p| match p.as_rule() {
         Rule::ellipsis => variadic = true,
-        Rule::type_expr => return_type = Some(parse_type_expr(p)),
+        Rule::type_expr => return_type = parse_type(p),
         _ => unreachable!(),
     });
     KalosPrototype {
@@ -133,18 +137,15 @@ pub fn parse_toplevel(t: Pair<Rule>) -> KalosToplevel {
         Rule::def => {
             let mut parts = t.into_inner();
             let prototype = parse_prototype(parts.next().unwrap());
-            let body = parse_stmt(parts.next().unwrap());
+            let body = parts.next().map(parse_stmt);
             KalosToplevel::Def { prototype, body }
         }
-        Rule::extern_stmt =>
-            KalosToplevel::Extern(parse_prototype(t.into_inner().next().unwrap())),
         _ => unreachable!(),
     }
 }
 
 pub fn parse_program(t: Pairs<Rule>) -> KalosProgram {
-    let program = t.take_while(|p| p.as_rule() != Rule::EOI)
-        .map(parse_toplevel).collect();
+    let program = t.take_while(|p| p.as_rule() != Rule::EOI).map(parse_toplevel).collect();
     KalosProgram {
         program,
     }

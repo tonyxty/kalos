@@ -1,5 +1,5 @@
-extern read_int() -> int;
-extern println(...);
+def read_int() -> int extern;
+def println(n...) extern;
 
 def sum(a, b) -> int { return a + b; }
 def main() {
