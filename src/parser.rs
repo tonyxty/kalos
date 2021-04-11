@@ -1,5 +1,7 @@
+use lazy_static::lazy_static;
 use pest::iterators::{Pair, Pairs};
 use pest::prec_climber::PrecClimber;
+use pest_derive::Parser;
 
 use crate::ast::{KalosBinOp::*, KalosExpr::{self, *}, KalosProgram, KalosPrototype, KalosStmt, KalosToplevel, KalosType};
 

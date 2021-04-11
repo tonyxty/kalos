@@ -1,5 +1,7 @@
 use std::io::stdin;
 
+use lazy_static::lazy_static;
+
 unsafe extern "C" fn println(n: i64, mut args: ...) {
     let mut values = Vec::new();
     for _ in 0..n {

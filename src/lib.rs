@@ -1,10 +1,5 @@
 #![feature(box_syntax)]
 #![feature(c_variadic)]
-#[macro_use]
-extern crate lazy_static;
-extern crate pest;
-#[macro_use]
-extern crate pest_derive;
 
 use std::fs::read_to_string;
 
