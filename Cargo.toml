@@ -10,5 +10,4 @@ edition = "2018"
 pest = "2.0"
 pest_derive = "2.0"
 lazy_static = "1.4"
-anyhow = "1.0.40"
 inkwell = { git = "https://github.com/TheDan64/inkwell", branch = "master", features = ["llvm11-0"] }
