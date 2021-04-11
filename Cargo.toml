@@ -7,7 +7,7 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-pest = "2.0"
+pest = { git = "https://github.com/pest-parser/pest", branch = "master", features = ["const_prec_climber"] }
 pest_derive = "2.0"
 lazy_static = "1.4"
 inkwell = { git = "https://github.com/TheDan64/inkwell", branch = "master", features = ["llvm11-0"] }

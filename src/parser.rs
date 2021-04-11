@@ -1,5 +1,5 @@
-use lazy_static::lazy_static;
 use pest::iterators::{Pair, Pairs};
+use pest::prec_climber;
 use pest::prec_climber::PrecClimber;
 use pest_derive::Parser;
 
@@ -9,18 +9,11 @@ use crate::ast::{KalosBinOp::*, KalosExpr::{self, *}, KalosProgram, KalosPrototy
 #[grammar = "kalos.pest"]
 pub struct KalosParser;
 
-lazy_static! {
-    static ref PREC_CLIMBER: PrecClimber<Rule> = {
-        use pest::prec_climber::{Assoc::*, Operator};
-        use Rule::*;
-        PrecClimber::new(vec![
-            Operator::new(add, Left) | Operator::new(subtract, Left),
-            Operator::new(multiply, Left) | Operator::new(divide, Left) |
-                Operator::new(modulo, Left),
-            Operator::new(power, Right),
-        ])
-    };
-}
+const PREC_CLIMBER: PrecClimber<Rule> = prec_climber![
+    L   add | subtract,
+    L   multiply | divide | modulo,
+    R   power,
+];
 
 fn parse_identifier(id: Pair<Rule>) -> String {
     assert!(id.as_rule() == Rule::identifier);
