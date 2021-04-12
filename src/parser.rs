@@ -3,7 +3,7 @@ use pest::prec_climber;
 use pest::prec_climber::PrecClimber;
 use pest_derive::Parser;
 
-use crate::ast::{KalosBinOp::*, KalosExpr::{self, *}, KalosProgram, KalosPrototype, KalosStmt, KalosToplevel, KalosType};
+use crate::ast::{KalosBuiltin::*, KalosExpr::{self, *}, KalosProgram, KalosPrototype, KalosStmt, KalosToplevel, KalosType};
 
 #[derive(Parser)]
 #[grammar = "kalos.pest"]
@@ -62,7 +62,7 @@ pub fn parse_expr(expr: Pair<Rule>) -> KalosExpr {
                 Rule::power => Power,
                 _ => unreachable!(),
             };
-            BinOp { op, lhs: box lhs, rhs: box rhs }
+            Builtin { builtin: op, args: vec![lhs, rhs] }
         },
     )
 }

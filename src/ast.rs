@@ -1,5 +1,5 @@
 #[derive(Hash, PartialEq, Eq, Copy, Clone, Debug)]
-pub enum KalosBinOp {
+pub enum KalosBuiltin {
     Add,
     Subtract,
     Multiply,
@@ -12,7 +12,7 @@ pub enum KalosBinOp {
 pub enum KalosExpr {
     Literal(i64),
     Call { func: Box<Self>, args: Vec<Self> },
-    BinOp { op: KalosBinOp, lhs: Box<Self>, rhs: Box<Self> },
+    Builtin { builtin: KalosBuiltin, args: Vec<Self> },
     Identifier(String),
 }
 
