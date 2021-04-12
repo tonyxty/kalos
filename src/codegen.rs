@@ -10,7 +10,7 @@ use inkwell::IntPredicate;
 use inkwell::module::Module;
 use inkwell::passes::PassManager;
 use inkwell::types::FunctionType;
-use inkwell::values::{AnyValue, AnyValueEnum, BasicValueEnum, FunctionValue, PointerValue};
+use inkwell::values::{AnyValueEnum, BasicValueEnum, FunctionValue, PointerValue};
 
 use crate::ast::{KalosBuiltin, KalosExpr, KalosProgram, KalosPrototype, KalosStmt, KalosToplevel};
 use crate::codegen::KalosError::*;
@@ -90,6 +90,20 @@ impl<'ctx> LLVMCodeGen<'ctx, '_> {
         }
     }
 
+    fn compile_builtin(&self, builtin: KalosBuiltin, args: &[KalosExpr]) -> Result<BasicValueEnum<'ctx>, KalosError> {
+        use KalosBuiltin::*;
+        let lhs = self.compile_expr(&args[0])?.into_int_value();
+        let rhs = self.compile_expr(&args[1])?.into_int_value();
+        Ok(match builtin {
+            Add => self.builder.build_int_add(lhs, rhs, ""),
+            Subtract => self.builder.build_int_sub(lhs, rhs, ""),
+            Multiply => self.builder.build_int_mul(lhs, rhs, ""),
+            Divide => self.builder.build_int_signed_div(lhs, rhs, ""),
+            Modulo => self.builder.build_int_signed_rem(lhs, rhs, ""),
+            Power => unimplemented!()
+        }.into())
+    }
+
     pub fn compile_expr(&self, expr: &KalosExpr) -> Result<AnyValueEnum<'ctx>, KalosError> {
         use KalosExpr::*;
         Ok(match expr {
@@ -100,25 +114,13 @@ impl<'ctx> LLVMCodeGen<'ctx, '_> {
                     .and_then(|v| v.try_into().map_err(|_| KalosError::TypeError)))
                     .collect::<Result<Vec<BasicValueEnum>, KalosError>>()?;
                 self.builder.build_call(func, &args[..], "").
-                    try_as_basic_value().unwrap_left().as_any_value_enum()
+                    try_as_basic_value().unwrap_left().into()
             }
-            Builtin { builtin, args } => {
-                use KalosBuiltin::*;
-                let lhs = self.compile_expr(&args[0])?.into_int_value();
-                let rhs = self.compile_expr(&args[1])?.into_int_value();
-                match builtin {
-                    Add => self.builder.build_int_add(lhs, rhs, ""),
-                    Subtract => self.builder.build_int_sub(lhs, rhs, ""),
-                    Multiply => self.builder.build_int_mul(lhs, rhs, ""),
-                    Divide => self.builder.build_int_signed_div(lhs, rhs, ""),
-                    Modulo => self.builder.build_int_signed_rem(lhs, rhs, ""),
-                    Power => unimplemented!()
-                }.as_any_value_enum()
-            }
+            Builtin { builtin, args } => self.compile_builtin(*builtin, args)?.into(),
             Identifier(name) => {
                 let var = self.env.get(name).copied().ok_or(KalosError::NameError)?;
                 if var.is_pointer_value() {
-                    self.builder.build_load(var.into_pointer_value(), "").as_any_value_enum()
+                    self.builder.build_load(var.into_pointer_value(), "").into()
                 } else {
                     var
                 }
