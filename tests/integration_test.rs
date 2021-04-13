@@ -5,9 +5,11 @@ use std::cell::RefCell;
 use lazy_static::lazy_static;
 
 use kalos::run;
+use rand::Rng;
 
 thread_local! {
     static INPUT_BUF: RefCell<Option<Vec<i64>>> = RefCell::new(None);
+    // Note that INPUT_BUF is fed to the program in reverse order
     static OUTPUT_BUF: RefCell<Option<Vec<i64>>> = RefCell::new(None);
 }
 
@@ -37,37 +39,55 @@ lazy_static! {
     ];
 }
 
-fn test_file(filename: &str, input: Vec<i64>, output: Vec<i64>) {
+fn test_file(filename: &str, input: Vec<i64>, verify: impl FnOnce(&Vec<i64>) -> bool) {
     INPUT_BUF.with(|input_buf| input_buf.replace(Some(input)));
     OUTPUT_BUF.with(|output_buf| output_buf.replace(Some(Vec::new())));
     run(filename, &*TEST_RUNTIME);
     OUTPUT_BUF.with(|output_buf| {
         let output_buf = output_buf.borrow();
         let output_buf = output_buf.as_ref().unwrap();
-        assert_eq!(output_buf.len(), output.len());
-        for (x, y) in output_buf.iter().zip(&output) {
-            assert_eq!(*x, *y);
-        }
+        assert!(verify(output_buf));
     });
+}
+
+fn vec_equal<T: PartialEq>(lhs: &Vec<T>, rhs: &Vec<T>) -> bool {
+    if lhs.len() != rhs.len() {
+        return false;
+    }
+    for (x, y) in lhs.iter().zip(rhs) {
+        if *x != *y {
+            return false;
+        }
+    }
+    true
 }
 
 #[test]
 fn test_plus() {
-    test_file("examples/a+b.kls", vec![3, 4], vec![7]);
+    let mut rng = rand::thread_rng();
+    let x: i64 = rng.gen();
+    let y: i64 = rng.gen();
+    test_file("examples/a+b.kls", vec![x, y], |v| v.len() == 1 && v[0] == x + y);
 }
 
 #[test]
 fn test_chinese_remainder_theorem() {
-    test_file("examples/CRT.kls", vec![2, 3, 2], vec![23]);
+    let mut rng = rand::thread_rng();
+    let a = rng.gen::<i64>() % 3;
+    let b = rng.gen::<i64>() % 5;
+    let c = rng.gen::<i64>() % 7;
+    test_file("examples/CRT.kls", vec![c, b, a],
+              |v| v.len() == 1 && v[0] % 3 == a && v[0] % 5 == b && v[0] % 7 == c);
 }
 
 #[test]
 fn test_hanoi() {
-    test_file("examples/hanoi.kls", vec![3], vec![1, 3, 1, 2, 3, 2, 1, 3, 2, 1, 2, 3, 1, 3]);
+    test_file("examples/hanoi.kls", vec![3],
+              |v| vec_equal(v, &vec![1, 3, 1, 2, 3, 2, 1, 3, 2, 1, 2, 3, 1, 3]));
 }
 
 #[test]
 fn test_loop() {
     test_file("examples/loop.kls", Vec::new(),
-              vec![625, 529, 441, 361, 289, 225, 169, 121, 81, 49, 25, 9, 1]);
+              |v| vec_equal(v, &vec![625, 529, 441, 361, 289, 225, 169, 121, 81, 49, 25, 9, 1]));
 }
