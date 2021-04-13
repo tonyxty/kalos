@@ -10,10 +10,12 @@ use crate::codegen::LLVMCodeGen;
 use crate::execution::JITExecutionEngine;
 use crate::parser::{KalosParser, parse_program, Rule};
 pub use crate::runtime::DEFAULT_RUNTIME;
+use crate::tyck::Tycker;
 
 mod ast;
 mod parser;
 mod env;
+mod tyck;
 mod codegen;
 mod execution;
 mod runtime;
@@ -24,6 +26,8 @@ pub fn run<'a, T>(filename: &str, runtime: impl IntoIterator<Item=&'a (&'a T, us
     let input = read_to_string(filename).expect("some read thing failed");
     let parse = KalosParser::parse(Rule::program, &input).expect("some parse thing failed");
     let program = parse_program(parse);
+    let mut typechecker = Tycker::new();
+    typechecker.tyck_program(&program).expect("some type thing failed");
 
     let context = Context::create();
     let module = context.create_module("");

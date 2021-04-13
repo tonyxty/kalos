@@ -3,7 +3,7 @@ use pest::prec_climber;
 use pest::prec_climber::PrecClimber;
 use pest_derive::Parser;
 
-use crate::ast::{KalosBuiltin::*, KalosExpr::{self, *}, KalosProgram, KalosPrototype, KalosStmt, KalosToplevel, KalosType};
+use crate::ast::{KalosBuiltin::*, KalosExpr::{self, *}, KalosProgram, KalosSignature, KalosStmt, KalosToplevel, KalosType};
 
 #[derive(Parser)]
 #[grammar = "kalos.pest"]
@@ -22,7 +22,7 @@ fn parse_identifier(id: Pair<Rule>) -> String {
 
 fn parse_atom(atom: Pair<Rule>) -> KalosExpr {
     match atom.as_rule() {
-        Rule::literal => Literal(atom.as_str().parse::<i64>().unwrap()),
+        Rule::literal => IntLiteral(atom.as_str().parse::<i64>().unwrap()),
         Rule::identifier => Identifier(parse_identifier(atom)),
         Rule::expr => parse_expr(atom),
         _ => unreachable!(),
@@ -35,6 +35,7 @@ fn parse_type(type_expr: Pair<Rule>) -> KalosType {
     match type_expr.into_inner().next().unwrap().as_rule() {
         Rule::auto => Auto,
         Rule::int => Integer { signed: true, width: 64 },
+        Rule::boolean => Bool,
         _ => unreachable!(),
     }
 }
@@ -107,20 +108,20 @@ pub fn parse_stmt(stmt: Pair<Rule>) -> KalosStmt {
     }
 }
 
-fn parse_prototype(prototype: Pair<Rule>) -> KalosPrototype {
-    assert!(prototype.as_rule() == Rule::prototype);
-    let mut parts = prototype.into_inner();
-    let name = parse_identifier(parts.next().unwrap());
-    let params = parts.next().unwrap().into_inner().map(parse_identifier).collect();
+fn parse_signature(signature: Pair<Rule>) -> KalosSignature {
+    assert!(signature.as_rule() == Rule::signature);
+    let mut parts = signature.into_inner();
+    let params = parts.next().unwrap().into_inner()
+        .map(|x| (parse_identifier(x), KalosType::Auto))
+        .collect();
     let mut variadic = false;
-    let mut return_type = KalosType::Unit;
+    let mut return_type = box KalosType::Unit;
     parts.for_each(|p| match p.as_rule() {
         Rule::ellipsis => variadic = true,
-        Rule::type_expr => return_type = parse_type(p),
+        Rule::type_expr => *return_type = parse_type(p),
         _ => unreachable!(),
     });
-    KalosPrototype {
-        name,
+    KalosSignature {
         params,
         return_type,
         variadic,
@@ -131,9 +132,10 @@ pub fn parse_toplevel(t: Pair<Rule>) -> KalosToplevel {
     match t.as_rule() {
         Rule::def => {
             let mut parts = t.into_inner();
-            let prototype = parse_prototype(parts.next().unwrap());
+            let name = parts.next().unwrap().as_str().to_owned();
+            let signature = parse_signature(parts.next().unwrap());
             let body = parts.next().map(parse_stmt);
-            KalosToplevel::Def { prototype, body }
+            KalosToplevel::Def { name, signature, body }
         }
         _ => unreachable!(),
     }

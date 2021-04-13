@@ -1,9 +1,9 @@
 program = _{ SOI ~ toplevel* ~ EOI }
 
 toplevel = _{ def }
-def = { "def" ~ prototype ~ ("extern" ~ ";" | compound_stmt) }
+def = { "def" ~ identifier ~ signature ~ ("extern" ~ ";" | compound_stmt) }
 
-prototype = { identifier ~ "(" ~ param_list ~ ellipsis? ~ ")" ~ ("->" ~ type_expr)? }
+signature = { "(" ~ param_list ~ ellipsis? ~ ")" ~ ("->" ~ type_expr)? }
 param_list = { identifier? ~ ("," ~ identifier)* }
 ellipsis = { "..." }
 
@@ -30,9 +30,10 @@ operator = _{ power | multiply | divide | modulo | add | subtract }
 	power = { "**" }
 	modulo = { "%" }
 
-type_expr = { auto | int }
+type_expr = { auto | int | boolean }
     auto = { "auto" }
     int = { "int" }
+    boolean = { "bool" }
 
 literal = @{ ASCII_DIGIT+ }
 identifier = @{ LETTER ~ (LETTER | NUMBER | "_")* }

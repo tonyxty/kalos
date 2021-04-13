@@ -1,7 +1,5 @@
 use std::collections::HashMap;
 use std::convert::TryInto;
-use std::error::Error;
-use std::fmt::{Display, Formatter};
 
 use inkwell::basic_block::BasicBlock;
 use inkwell::builder::Builder;
@@ -12,28 +10,8 @@ use inkwell::passes::PassManager;
 use inkwell::types::FunctionType;
 use inkwell::values::{AnyValueEnum, BasicValueEnum, FunctionValue, PointerValue};
 
-use crate::ast::{KalosBuiltin, KalosExpr, KalosProgram, KalosPrototype, KalosStmt, KalosToplevel};
-use crate::codegen::KalosError::*;
+use crate::ast::{KalosBuiltin, KalosExpr, KalosProgram, KalosSignature, KalosStmt, KalosToplevel, KalosError};
 use crate::env::Env;
-
-#[derive(Debug)]
-pub enum KalosError {
-    NameError,
-    TypeError,
-    LvalueError,
-}
-
-impl Display for KalosError {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            NameError => f.write_str("NameError"),
-            TypeError => f.write_str("TypeError"),
-            LvalueError => f.write_str("LvalueError"),
-        }
-    }
-}
-
-impl Error for KalosError {}
 
 pub struct LLVMCodeGen<'ctx, 'm> {
     context: &'ctx Context,
@@ -75,7 +53,7 @@ impl<'ctx> LLVMCodeGen<'ctx, '_> {
         self.context.append_basic_block(self.current_fn.unwrap(), "")
     }
 
-    fn compile_prototype(&self, prototype: &KalosPrototype) -> FunctionType<'ctx> {
+    fn compile_signature(&self, prototype: &KalosSignature) -> FunctionType<'ctx> {
         let i64_type = self.context.i64_type();
         let n = prototype.params.len();
         let param_types = vec![i64_type.into(); n];
@@ -107,11 +85,13 @@ impl<'ctx> LLVMCodeGen<'ctx, '_> {
     pub fn compile_expr(&self, expr: &KalosExpr) -> Result<AnyValueEnum<'ctx>, KalosError> {
         use KalosExpr::*;
         Ok(match expr {
-            Literal(x) => self.context.i64_type().const_int(*x as u64, true).into(),
+            IntLiteral(x) => self.context.i64_type().const_int(*x as u64, true).into(),
+            BoolLiteral(x) => self.context.bool_type().const_int(*x as u64, false).into(),
+            StringLiteral(x) => todo!(),
             Call { func, args } => {
                 let func = self.compile_expr(func)?.into_function_value();
                 let args = args.iter().map(|e| self.compile_expr(e)
-                    .and_then(|v| v.try_into().map_err(|_| KalosError::TypeError)))
+                    .map(|v| v.try_into().unwrap()))
                     .collect::<Result<Vec<BasicValueEnum>, KalosError>>()?;
                 self.builder.build_call(func, &args[..], "").
                     try_as_basic_value().unwrap_left().into()
@@ -200,14 +180,14 @@ impl<'ctx> LLVMCodeGen<'ctx, '_> {
     pub fn compile_toplevel(&mut self, toplevel: &KalosToplevel)
                             -> Result<FunctionValue<'ctx>, KalosError> {
         match toplevel {
-            KalosToplevel::Def { prototype, body } => {
-                let fn_type = self.compile_prototype(prototype);
-                let func = self.module.add_function(&prototype.name, fn_type, None);
-                self.env.put(prototype.name.clone(), func.into());
+            KalosToplevel::Def { name, signature, body } => {
+                let fn_type = self.compile_signature(signature);
+                let func = self.module.add_function(name, fn_type, None);
+                self.env.put(name.clone(), func.into());
                 if let Some(body) = body {
-                    self.env.push(prototype.params.iter()
+                    self.env.push(signature.params.iter()
                         .zip(func.get_param_iter())
-                        .map(|(name, param)| (name.clone(), param.into()))
+                        .map(|((name, _), param)| (name.clone(), param.into()))
                         .collect());
                     let block = self.context.append_basic_block(func, "");
                     self.builder.position_at_end(block);
