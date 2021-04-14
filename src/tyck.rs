@@ -1,6 +1,7 @@
-use crate::env::Env;
-use crate::ast::{KalosType, KalosExpr, KalosError, KalosProgram, KalosStmt, KalosToplevel};
 use std::collections::HashMap;
+
+use crate::ast::{KalosBuiltin, KalosError, KalosExpr, KalosProgram, KalosStmt, KalosToplevel, KalosType::{self, *}};
+use crate::env::Env;
 
 pub struct Tycker {
     env: Env<String, KalosType>,
@@ -15,8 +16,28 @@ impl Tycker {
         self.env.tables.first().unwrap()
     }
 
+    fn tyck_builtin(&self, builtin: KalosBuiltin,
+                    args: &[KalosExpr]) -> Result<KalosType, KalosError> {
+        use KalosBuiltin::*;
+        let lhs = self.tyck_expr(&args[0])?;
+        let rhs = self.tyck_expr(&args[1])?;
+        match builtin {
+            Add => Ok(lhs),
+            Subtract => Ok(lhs),
+            Multiply => Ok(lhs),
+            Divide => Ok(lhs),
+            Modulo => Ok(lhs),
+            Power => Ok(lhs),
+            LessThan => Ok(Bool),
+            LessEqual => Ok(Bool),
+            Equal => Ok(Bool),
+            GreaterEqual => Ok(Bool),
+            GreaterThan => Ok(Bool),
+            NotEqual => Ok(Bool),
+        }
+    }
+
     pub fn tyck_expr(&self, expr: &KalosExpr) -> Result<KalosType, KalosError> {
-        use KalosType::*;
         match expr {
             KalosExpr::IntLiteral(_) => Ok(Integer { signed: true, width: 64 }),
             KalosExpr::BoolLiteral(_) => Ok(Bool),
@@ -35,11 +56,10 @@ impl Tycker {
                         Err(KalosError::ArgError)
                     }
                 } else {
-                    Err(KalosError::TypeError { expect: KalosType::Auto, found: ty })
+                    Err(KalosError::TypeError { expect: Auto, found: ty })
                 }
             }
-            KalosExpr::Builtin { builtin, args } =>
-                self.tyck_expr(&args[0]),
+            KalosExpr::Builtin { builtin, args } => self.tyck_builtin(*builtin, args),
             KalosExpr::Identifier(name) =>
                 Ok(self.env.get(name).ok_or(KalosError::NameError)?.to_owned()),
         }
@@ -68,12 +88,14 @@ impl Tycker {
                 // TODO: check type of expr matches the return type of current function
             }
             KalosStmt::If { cond, then_part, else_part } => {
+                Bool.try_unify(&self.tyck_expr(cond)?)?;
                 self.tyck_stmt(then_part)?;
                 if let Some(else_part) = else_part {
                     self.tyck_stmt(else_part)?;
                 }
             }
             KalosStmt::While { cond, body } => {
+                Bool.try_unify(&self.tyck_expr(cond)?)?;
                 self.tyck_stmt(body)?;
             }
             KalosStmt::Expression(expr) => {
@@ -86,8 +108,7 @@ impl Tycker {
     pub fn tyck_toplevel(&mut self, toplevel: &KalosToplevel) -> Result<(), KalosError> {
         match toplevel {
             KalosToplevel::Def { name, signature, body, .. } => {
-                self.env.put(name.to_owned(),
-                             KalosType::Function { signature: signature.to_owned() });
+                self.env.put(name.to_owned(), Function { signature: signature.to_owned() });
                 self.env.push(signature.params.iter().map(|x| x.to_owned()).collect());
                 if let Some(body) = body {
                     self.tyck_stmt(body)?;

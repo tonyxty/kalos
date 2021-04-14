@@ -10,6 +10,8 @@ use crate::ast::{KalosBuiltin::*, KalosExpr::{self, *}, KalosProgram, KalosSigna
 pub struct KalosParser;
 
 const PREC_CLIMBER: PrecClimber<Rule> = prec_climber![
+    L   equal | not_equal,
+    L   less_than | less_equal | greater_than | greater_equal,
     L   add | subtract,
     L   multiply | divide | modulo,
     R   power,
@@ -61,6 +63,12 @@ pub fn parse_expr(expr: Pair<Rule>) -> KalosExpr {
                 Rule::divide => Divide,
                 Rule::modulo => Modulo,
                 Rule::power => Power,
+                Rule::less_than => LessThan,
+                Rule::less_equal => LessEqual,
+                Rule::equal => Equal,
+                Rule::greater_equal => GreaterEqual,
+                Rule::greater_than => GreaterThan,
+                Rule::not_equal => NotEqual,
                 _ => unreachable!(),
             };
             Builtin { builtin: op, args: vec![lhs, rhs] }

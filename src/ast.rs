@@ -9,6 +9,12 @@ pub enum KalosBuiltin {
     Divide,
     Modulo,
     Power,
+    LessThan,
+    LessEqual,
+    Equal,
+    GreaterEqual,
+    GreaterThan,
+    NotEqual,
 }
 
 #[derive(Clone, Debug)]

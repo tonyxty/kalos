@@ -10,7 +10,7 @@ use inkwell::passes::PassManager;
 use inkwell::types::FunctionType;
 use inkwell::values::{AnyValueEnum, BasicValueEnum, FunctionValue, PointerValue};
 
-use crate::ast::{KalosBuiltin, KalosExpr, KalosProgram, KalosSignature, KalosStmt, KalosToplevel, KalosError};
+use crate::ast::{KalosBuiltin, KalosError, KalosExpr, KalosProgram, KalosSignature, KalosStmt, KalosToplevel};
 use crate::env::Env;
 
 pub struct LLVMCodeGen<'ctx, 'm> {
@@ -68,7 +68,8 @@ impl<'ctx> LLVMCodeGen<'ctx, '_> {
         }
     }
 
-    fn compile_builtin(&self, builtin: KalosBuiltin, args: &[KalosExpr]) -> Result<BasicValueEnum<'ctx>, KalosError> {
+    fn compile_builtin(&self, builtin: KalosBuiltin,
+                       args: &[KalosExpr]) -> Result<BasicValueEnum<'ctx>, KalosError> {
         use KalosBuiltin::*;
         let lhs = self.compile_expr(&args[0])?.into_int_value();
         let rhs = self.compile_expr(&args[1])?.into_int_value();
@@ -78,7 +79,13 @@ impl<'ctx> LLVMCodeGen<'ctx, '_> {
             Multiply => self.builder.build_int_mul(lhs, rhs, ""),
             Divide => self.builder.build_int_signed_div(lhs, rhs, ""),
             Modulo => self.builder.build_int_signed_rem(lhs, rhs, ""),
-            Power => unimplemented!()
+            Power => unimplemented!(),
+            LessThan => self.builder.build_int_compare(IntPredicate::SLT, lhs, rhs, ""),
+            LessEqual => self.builder.build_int_compare(IntPredicate::SLE, lhs, rhs, ""),
+            Equal => self.builder.build_int_compare(IntPredicate::EQ, lhs, rhs, ""),
+            GreaterEqual => self.builder.build_int_compare(IntPredicate::SGE, lhs, rhs, ""),
+            GreaterThan => self.builder.build_int_compare(IntPredicate::SGT, lhs, rhs, ""),
+            NotEqual => self.builder.build_int_compare(IntPredicate::NE, lhs, rhs, ""),
         }.into())
     }
 
@@ -139,8 +146,6 @@ impl<'ctx> LLVMCodeGen<'ctx, '_> {
             }
             If { cond, then_part, else_part } => {
                 let cond_value = self.compile_expr(cond)?.into_int_value();
-                let cond_value = self.builder.build_int_compare(
-                    IntPredicate::NE, cond_value, self.context.i64_type().const_zero(), "");
                 let then_block = self.new_block();
                 let else_block = self.new_block();
                 let cont_block = self.new_block();
@@ -157,16 +162,12 @@ impl<'ctx> LLVMCodeGen<'ctx, '_> {
             }
             While { cond, body } => {
                 let cond_value = self.compile_expr(cond)?.into_int_value();
-                let cond_value = self.builder.build_int_compare(
-                    IntPredicate::NE, cond_value, self.context.i64_type().const_zero(), "");
                 let loop_block = self.new_block();
                 let cont_block = self.new_block();
                 self.builder.build_conditional_branch(cond_value, loop_block, cont_block);
                 self.builder.position_at_end(loop_block);
                 self.compile_stmt(body)?;
                 let cond_value_recheck = self.compile_expr(cond)?.into_int_value();
-                let cond_value_recheck = self.builder.build_int_compare(
-                    IntPredicate::NE, cond_value_recheck, self.context.i64_type().const_zero(), "");
                 self.builder.build_conditional_branch(cond_value_recheck, loop_block, cont_block);
                 self.builder.position_at_end(cont_block);
             }

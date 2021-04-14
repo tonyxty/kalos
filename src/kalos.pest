@@ -23,13 +23,20 @@ atom = _{ "(" ~ expr ~ ")" | literal | identifier }
 
 call = { atom ~ "(" ~ arg_list ~ ")" }
 arg_list = { expr? ~ ("," ~ expr)* }
-operator = _{ power | multiply | divide | modulo | add | subtract }
+operator = _{ power | multiply | divide | modulo | add | subtract |
+    less_equal | equal | greater_equal | less_than | greater_than | not_equal }
 	add = { "+" }
 	subtract = { "-" }
 	multiply = { "*" }
 	divide = { "/" }
-	power = { "**" }
 	modulo = { "%" }
+	power = { "**" }
+	less_than = { "<" }
+	less_equal = { "<=" }
+	equal = { "==" }
+	greater_equal = { ">=" }
+	greater_than = { ">" }
+	not_equal = { "!=" }
 
 type_expr = { auto | int | boolean }
     auto = { "auto" }
