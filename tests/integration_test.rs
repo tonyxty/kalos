@@ -67,15 +67,15 @@ fn test_plus() {
     let mut rng = rand::thread_rng();
     let x: i64 = rng.gen();
     let y: i64 = rng.gen();
-    test_file("examples/a+b.kls", vec![x, y], |v| v.len() == 1 && v[0] == x + y);
+    test_file("examples/a+b.kls", vec![x, y], |v| v.len() == 1 && v[0] == i64::wrapping_add(x, y))
 }
 
 #[test]
 fn test_chinese_remainder_theorem() {
     let mut rng = rand::thread_rng();
-    let a = rng.gen::<i64>() % 3;
-    let b = rng.gen::<i64>() % 5;
-    let c = rng.gen::<i64>() % 7;
+    let a = (rng.gen::<u8>() % 3) as i64;
+    let b = (rng.gen::<u8>() % 5) as i64;
+    let c = (rng.gen::<u8>() % 7) as i64;
     test_file("examples/CRT.kls", vec![c, b, a],
               |v| v.len() == 1 && v[0] % 3 == a && v[0] % 5 == b && v[0] % 7 == c);
 }

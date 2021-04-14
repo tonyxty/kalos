@@ -54,7 +54,11 @@ impl Tycker {
                 lhs_type.try_unify(&rhs_type)?;
             }
             KalosStmt::Var { name, ty, initializer } => {
-                self.env.put(name.to_owned(), ty.to_owned());
+                let ty = if let Some(initializer) = initializer {
+                    let init_ty = self.tyck_expr(initializer)?;
+                    if ty.try_unify(&init_ty)? == &init_ty { init_ty } else { ty.to_owned() }
+                } else { ty.to_owned() };
+                self.env.put(name.to_owned(), ty);
             }
             KalosStmt::Return(expr) => {
                 // TODO: check type of expr matches the return type of current function

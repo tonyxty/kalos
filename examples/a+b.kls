@@ -1,7 +1,7 @@
 def read_int() -> int extern;
-def println(n...) extern;
+def println(n: int, ...) extern;
 
-def sum(a, b) -> int { return a + b; }
+def sum(a: int, b: int) -> int { return a + b; }
 def main() {
 	var x = read_int();
 	var y = read_int();

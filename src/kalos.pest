@@ -3,8 +3,9 @@ program = _{ SOI ~ toplevel* ~ EOI }
 toplevel = _{ def }
 def = { "def" ~ identifier ~ signature ~ ("extern" ~ ";" | compound_stmt) }
 
-signature = { "(" ~ param_list ~ ellipsis? ~ ")" ~ ("->" ~ type_expr)? }
-param_list = { identifier? ~ ("," ~ identifier)* }
+signature = { "(" ~ param_list ~ ")" ~ ("->" ~ type_expr)? }
+param = { identifier ~ ":" ~ type_expr }
+param_list = { (param ~ ("," ~ param)* ~ ("," ~ ellipsis)?)? }
 ellipsis = { "..." }
 
 stmt = _{ compound_stmt | var_stmt | assignment_stmt | return_stmt | if_stmt | while_stmt | expr_stmt }

@@ -1,5 +1,5 @@
 def read_int() -> int extern;
-def println(n...) extern;
+def println(n: int, ...) extern;
 
 def main() {
 	var a = read_int();

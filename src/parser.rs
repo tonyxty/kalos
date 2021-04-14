@@ -111,16 +111,23 @@ pub fn parse_stmt(stmt: Pair<Rule>) -> KalosStmt {
 fn parse_signature(signature: Pair<Rule>) -> KalosSignature {
     assert!(signature.as_rule() == Rule::signature);
     let mut parts = signature.into_inner();
-    let params = parts.next().unwrap().into_inner()
-        .map(|x| (parse_identifier(x), KalosType::Auto))
-        .collect();
+
+    // FIXME: is there a more idiomatic way for this?  (fold works but makes little difference)
     let mut variadic = false;
-    let mut return_type = box KalosType::Unit;
-    parts.for_each(|p| match p.as_rule() {
-        Rule::ellipsis => variadic = true,
-        Rule::type_expr => *return_type = parse_type(p),
-        _ => unreachable!(),
-    });
+    let mut params = Vec::new();
+    for p in parts.next().unwrap().into_inner() {
+        match p.as_rule() {
+            Rule::param => {
+                let mut parts = p.into_inner();
+                let name = parse_identifier(parts.next().unwrap());
+                let ty = parse_type(parts.next().unwrap());
+                params.push((name, ty));
+            }
+            Rule::ellipsis => { variadic = true; }
+            _ => unreachable!(),
+        }
+    }
+    let return_type = box parts.next().map(parse_type).unwrap_or(KalosType::Unit);
     KalosSignature {
         params,
         return_type,

@@ -1,4 +1,4 @@
-def println(n...) extern;
+def println(n: int, ...) extern;
 def main() {
 	var x = 25;
 	while (x) {
