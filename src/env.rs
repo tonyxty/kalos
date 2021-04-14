@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use std::hash::Hash;
 
 pub struct Env<K, V> {
-    tables: Vec<HashMap<K, V>>
+    pub tables: Vec<HashMap<K, V>>
 }
 
 impl<K, V> From<Vec<HashMap<K, V>>> for Env<K, V> {

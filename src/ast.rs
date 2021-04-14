@@ -34,6 +34,33 @@ pub enum KalosType {
     Function { signature: KalosSignature },
 }
 
+impl Display for KalosType {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            KalosType::Auto => write!(f, "_"),
+            KalosType::Unit => write!(f, "()"),
+            KalosType::Bool => write!(f, "bool"),
+            KalosType::Integer { signed, width } =>
+                write!(f, "{}{}", if *signed {'i'} else {'u'}, width),
+            KalosType::Text => write!(f, "text"),
+            KalosType::Function { signature } => {
+                write!(f, "fn (")?;
+                let mut sep = false;
+                for (name, ty) in &signature.params {
+                    if sep { write!(f, ", ")? }
+                    write!(f, "{}: {}", name, ty)?;
+                    sep = true;
+                }
+                if signature.variadic {
+                    if sep { write!(f, ", ")? }
+                    write!(f, "...")?;
+                }
+                write!(f, ") -> {}", signature.return_type)
+            }
+        }
+    }
+}
+
 impl KalosType {
     pub fn try_unify<'a>(&'a self, other: &'a Self) -> Result<&'a Self, KalosError> {
         use KalosType::*;
@@ -42,10 +69,7 @@ impl KalosType {
         } else if *self == *other {
             Ok(other)
         } else {
-            Err(KalosError::TypeError {
-                expect: Some(self.to_owned()),
-                found: Some(other.to_owned())
-            })
+            Err(KalosError::TypeError { expect: self.to_owned(), found: other.to_owned() })
         }
     }
 }
@@ -87,7 +111,7 @@ pub struct KalosProgram {
 #[derive(Debug)]
 pub enum KalosError {
     NameError,
-    TypeError { expect: Option<KalosType>, found: Option<KalosType> },
+    TypeError { expect: KalosType, found: KalosType },
     LvalueError,
     ArgError,
 }
@@ -96,10 +120,11 @@ impl Display for KalosError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         use KalosError::*;
         match self {
-            NameError => f.write_str("NameError"),
-            TypeError { expect, found } => f.write_str("TypeError"),
-            LvalueError => f.write_str("LvalueError"),
-            ArgError => f.write_str("ArgError"),
+            NameError => write!(f, "NameError"),
+            TypeError { expect, found } =>
+                write!(f, "TypeError: expect {} found {}", expect, found),
+            LvalueError => write!(f, "LvalueError"),
+            ArgError => write!(f, "ArgError"),
         }
     }
 }

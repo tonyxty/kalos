@@ -11,6 +11,10 @@ impl Tycker {
         Self { env: Env::from(vec![HashMap::new()]) }
     }
 
+    pub fn get_globals(&self) -> &HashMap<String, KalosType> {
+        self.env.tables.first().unwrap()
+    }
+
     pub fn tyck_expr(&self, expr: &KalosExpr) -> Result<KalosType, KalosError> {
         use KalosType::*;
         match expr {
@@ -31,7 +35,7 @@ impl Tycker {
                         Err(KalosError::ArgError)
                     }
                 } else {
-                    Err(KalosError::TypeError { expect: None, found: Some(ty) })
+                    Err(KalosError::TypeError { expect: KalosType::Auto, found: ty })
                 }
             }
             KalosExpr::Builtin { builtin, args } =>

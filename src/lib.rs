@@ -2,6 +2,7 @@
 #![feature(c_variadic)]
 
 use std::fs::read_to_string;
+use std::io::Write;
 
 use inkwell::context::Context;
 use pest::Parser;
@@ -26,15 +27,23 @@ pub fn run<'a, T>(filename: &str, runtime: impl IntoIterator<Item=&'a (&'a T, us
     let input = read_to_string(filename).expect("some read thing failed");
     let parse = KalosParser::parse(Rule::program, &input).expect("some parse thing failed");
     let program = parse_program(parse);
-    let mut typechecker = Tycker::new();
-    typechecker.tyck_program(&program).expect("some type thing failed");
+    let mut tycker = Tycker::new();
+    tycker.tyck_program(&program).expect("some type thing failed");
 
     let context = Context::create();
     let module = context.create_module("");
     let mut codegen = LLVMCodeGen::new(&context, &module);
     codegen.compile_program(&program).expect("some compile thing failed");
 
-    module.print_to_stderr();
+    {
+        let stderr = std::io::stderr();
+        let mut stderr = stderr.lock();
+        writeln!(&mut stderr, "file: {}", filename).unwrap();
+        for (name, ty) in tycker.get_globals() {
+            writeln!(&mut stderr, "{}: {}", name, ty).unwrap();
+        }
+        module.print_to_stderr();
+    }
 
     let engine = JITExecutionEngine::new(&module);
     engine.attach_runtime(runtime);
