@@ -9,11 +9,11 @@ def hanoi(n: int, x: int, y: int, z: int) {
 	} else {
 		println(2, x, z);
 	}
-	return 0;
+	return;
 }
 
 def main() {
 	var n = read_int();
 	hanoi(n, 1, 2, 3);
-	return 0;
+	return;
 }

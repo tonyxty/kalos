@@ -6,5 +6,5 @@ def main() {
 	var x = read_int();
 	var y = read_int();
 	println(1, sum(x, y));
-	return 0;
+	return;
 }

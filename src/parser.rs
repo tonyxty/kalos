@@ -77,14 +77,15 @@ pub fn parse_expr(expr: Pair<Rule>) -> KalosExpr {
 }
 
 pub fn parse_stmt(stmt: Pair<Rule>) -> KalosStmt {
+    use KalosStmt::*;
     match stmt.as_rule() {
         Rule::assignment_stmt => {
             let mut parts = stmt.into_inner();
             let lhs = parse_expr(parts.next().unwrap());
             let rhs = parse_expr(parts.next().unwrap());
-            KalosStmt::Assignment { lhs, rhs }
+            Assignment { lhs, rhs }
         }
-        Rule::compound_stmt => KalosStmt::Compound(stmt.into_inner().map(parse_stmt).collect()),
+        Rule::compound_stmt => Compound(stmt.into_inner().map(parse_stmt).collect()),
         Rule::var_stmt => {
             let mut parts = stmt.into_inner();
             let name = parse_identifier(parts.next().unwrap());
@@ -95,23 +96,24 @@ pub fn parse_stmt(stmt: Pair<Rule>) -> KalosStmt {
                 Rule::expr => initializer = Some(parse_expr(p)),
                 _ => unreachable!(),
             });
-            KalosStmt::Var { name, ty, initializer }
+            Var { name, ty, initializer }
         }
-        Rule::return_stmt => KalosStmt::Return(stmt.into_inner().next().map(parse_expr)),
+        Rule::return_stmt =>
+            Return(stmt.into_inner().next().map(parse_expr).unwrap_or(UnitLiteral)),
         Rule::if_stmt => {
             let mut parts = stmt.into_inner();
             let cond = parse_expr(parts.next().unwrap());
             let then_part = box parse_stmt(parts.next().unwrap());
             let else_part = parts.next().map(|p| box parse_stmt(p));
-            KalosStmt::If { cond, then_part, else_part }
+            If { cond, then_part, else_part }
         }
         Rule::while_stmt => {
             let mut parts = stmt.into_inner();
             let cond = parse_expr(parts.next().unwrap());
             let body = box parse_stmt(parts.next().unwrap());
-            KalosStmt::While { cond, body }
+            While { cond, body }
         }
-        Rule::expr_stmt => KalosStmt::Expression(parse_expr(stmt.into_inner().next().unwrap())),
+        Rule::expr_stmt => Expression(parse_expr(stmt.into_inner().next().unwrap())),
         _ => unreachable!(),
     }
 }

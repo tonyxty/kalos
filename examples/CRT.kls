@@ -7,5 +7,5 @@ def main() {
 	var c = read_int();
 	var x = a * 70 + b * 21 + c * 15;
 	println(1, x % 105);
-	return 0;
+	return;
 }

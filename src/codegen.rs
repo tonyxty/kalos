@@ -7,10 +7,10 @@ use inkwell::context::Context;
 use inkwell::IntPredicate;
 use inkwell::module::Module;
 use inkwell::passes::PassManager;
-use inkwell::types::FunctionType;
+use inkwell::types::{FunctionType, AnyTypeEnum, BasicTypeEnum, BasicType};
 use inkwell::values::{AnyValueEnum, BasicValueEnum, FunctionValue, PointerValue};
 
-use crate::ast::{KalosBuiltin, KalosError, KalosExpr, KalosProgram, KalosSignature, KalosStmt, KalosToplevel};
+use crate::ast::{KalosBuiltin, KalosError, KalosExpr, KalosProgram, KalosSignature, KalosStmt, KalosToplevel, KalosType};
 use crate::env::Env;
 
 pub struct LLVMCodeGen<'ctx, 'm> {
@@ -53,11 +53,31 @@ impl<'ctx> LLVMCodeGen<'ctx, '_> {
         self.context.append_basic_block(self.current_fn.unwrap(), "")
     }
 
-    fn compile_signature(&self, prototype: &KalosSignature) -> FunctionType<'ctx> {
-        let i64_type = self.context.i64_type();
-        let n = prototype.params.len();
-        let param_types = vec![i64_type.into(); n];
-        i64_type.fn_type(&param_types, prototype.variadic)
+    fn compile_type(&self, ty: &KalosType) -> AnyTypeEnum<'ctx> {
+        use KalosType::*;
+        match ty {
+            Auto => unreachable!(),
+            Unit => self.context.void_type().into(),
+            Bool => self.context.bool_type().into(),
+            Integer { width, signed } => self.context.i64_type().into(),
+            Text => unimplemented!(),
+            Function { signature } => self.compile_signature(signature).into(),
+        }
+    }
+
+    fn compile_signature(&self, signature: &KalosSignature) -> FunctionType<'ctx> {
+        // HACK: the void type is not a "BasicType" and requires special treatment
+        // inkwell's IntType, FloatType, IntValue, FloatValue, etc. are inconvenient when code is
+        // generated from an IR that has already been tycked.
+        let return_type = self.compile_type(signature.return_type.as_ref());
+        let args: Vec<BasicTypeEnum> = signature.params.iter()
+            .map(|(_, ty)| self.compile_type(ty).try_into().unwrap()).collect();
+        if return_type.is_void_type() {
+            self.context.void_type().fn_type(&args, signature.variadic)
+        } else {
+            let return_type: BasicTypeEnum = return_type.try_into().unwrap();
+            return_type.fn_type(&args, signature.variadic)
+        }
     }
 
     pub fn compile_lvalue(&self, expr: &KalosExpr) -> Result<PointerValue<'ctx>, KalosError> {
@@ -92,6 +112,7 @@ impl<'ctx> LLVMCodeGen<'ctx, '_> {
     pub fn compile_expr(&self, expr: &KalosExpr) -> Result<AnyValueEnum<'ctx>, KalosError> {
         use KalosExpr::*;
         Ok(match expr {
+            UnitLiteral => unreachable!(),
             IntLiteral(x) => self.context.i64_type().const_int(*x as u64, true).into(),
             BoolLiteral(x) => self.context.bool_type().const_int(*x as u64, false).into(),
             StringLiteral(x) => todo!(),
@@ -100,8 +121,8 @@ impl<'ctx> LLVMCodeGen<'ctx, '_> {
                 let args = args.iter().map(|e| self.compile_expr(e)
                     .map(|v| v.try_into().unwrap()))
                     .collect::<Result<Vec<BasicValueEnum>, KalosError>>()?;
-                self.builder.build_call(func, &args[..], "").
-                    try_as_basic_value().unwrap_left().into()
+                self.builder.build_call(func, &args, "").try_as_basic_value()
+                    .left_or(self.context.i64_type().const_zero().into()).into()
             }
             Builtin { builtin, args } => self.compile_builtin(*builtin, args)?.into(),
             Identifier(name) => {
@@ -137,11 +158,11 @@ impl<'ctx> LLVMCodeGen<'ctx, '_> {
                 }
             }
             Return(expr) => {
-                if let Some(expr) = expr {
+                if let KalosExpr::UnitLiteral = expr {
+                    self.builder.build_return(None);
+                } else {
                     let expr_value: BasicValueEnum = self.compile_expr(expr)?.try_into().unwrap();
                     self.builder.build_return(Some(&expr_value));
-                } else {
-                    self.builder.build_return(None);
                 }
             }
             If { cond, then_part, else_part } => {

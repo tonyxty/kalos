@@ -15,7 +15,7 @@ impl<'a, 'ctx> JITExecutionEngine<'a, 'ctx> {
         }
     }
 
-    pub fn get_main(&self) -> JitFunction<'ctx, unsafe extern "C" fn() -> i64> {
+    pub fn get_main(&self) -> JitFunction<'ctx, unsafe extern "C" fn()> {
         unsafe { self.engine.get_function("main") }.unwrap()
     }
 }

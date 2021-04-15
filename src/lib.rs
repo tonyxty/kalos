@@ -21,7 +21,7 @@ mod codegen;
 mod execution;
 mod runtime;
 
-pub fn run<'a, T>(filename: &str, runtime: impl IntoIterator<Item=&'a (&'a T, usize)>) -> i64
+pub fn run<'a, T>(filename: &str, runtime: impl IntoIterator<Item=&'a (&'a T, usize)>)
     where T: 'a + ?Sized + AsRef<str>
 {
     let input = read_to_string(filename).expect("some read thing failed");
